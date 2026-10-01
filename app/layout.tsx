@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Manrope } from "next/font/google";
 import "./globals.css";
+import Sidebar from "@/components/ui/sidebar";
 import Navbar from "@/components/ui/navbar";
 
 const manrope = Manrope({
@@ -16,9 +17,20 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en" className={`${manrope.variable} h-full`}>
-      <body className="min-h-full flex p-5">
-        <Navbar />
-        <div className="bg-white rounded-[40px] w-full p-5">{children}</div>
+      <head>
+        <link
+          href="https://api.fontshare.com/v2/css?f[]=general-sans@400,500,600,700&display=swap"
+          rel="stylesheet"
+        />
+      </head>
+      <body className="h-screen w-screen overflow-hidden flex p-5 bg-background">
+        <Sidebar />
+        <div className="bg-white rounded-[40px] flex-1 min-w-0 h-full flex flex-col p-6 overflow-hidden">
+          <Navbar />
+          <main className="flex-1 min-h-0 overflow-y-auto no-scrollbar">
+            {children}
+          </main>
+        </div>
       </body>
     </html>
   );

@@ -3,142 +3,71 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ChevronRight } from "lucide-react";
+import { ChevronDown, ArrowLeft } from "lucide-react";
 import React from "react";
-
-interface NavItem {
-  label: string;
-  href: string;
-  icon: string;
-}
-
-interface NavSection {
-  title: string;
-  items: NavItem[];
-}
-
-const navSections: NavSection[] = [
-  {
-    title: "GENERAL",
-    items: [
-      {
-        label: "Overview",
-        href: "/",
-        icon: "/sidebar-icons/overview.png",
-      },
-    ],
-  },
-  {
-    title: "MANAGEMENT",
-    items: [
-      {
-        label: "Users",
-        href: "/users",
-        icon: "/sidebar-icons/users.png",
-      },
-      {
-        label: "Provider",
-        href: "/provider",
-        icon: "/sidebar-icons/hospital.png",
-      },
-      {
-        label: "Ambassadors",
-        href: "/ambassadors",
-        icon: "/sidebar-icons/users.png",
-      },
-      {
-        label: "Campaigns",
-        href: "/campaigns",
-        icon: "/sidebar-icons/volume-high.png",
-      },
-      {
-        label: "Referrals",
-        href: "/referrals",
-        icon: "/sidebar-icons/profile-add.png",
-      },
-    ],
-  },
-  {
-    title: "SYSTEM",
-    items: [
-      {
-        label: "Settings",
-        href: "/settings",
-        icon: "/sidebar-icons/setting-2.png",
-      },
-    ],
-  },
-];
 
 const Navbar = () => {
   const pathname = usePathname();
+  const isProviderDetails =
+    pathname?.startsWith("/provider/") && pathname !== "/provider";
 
   return (
-    <aside className="w-65 min-w-65 flex flex-col pr-4 select-none font-sans">
-      {/* Obrin Health Logo */}
-      <div className="pt-5 pb-6 px-4">
-        <Link href="/" className="inline-block">
+    <header className="w-full shrink-0 flex items-center justify-between pb-6 font-sans">
+      {isProviderDetails ? (
+        <Link
+          href="/provider"
+          className="inline-flex items-center gap-2.5 text-[#101828] font-semibold text-sm hover:opacity-80 transition-opacity cursor-pointer"
+        >
+          <ArrowLeft className="w-4 h-4 text-[#101828]" />
+          <span>Back to providers</span>
+        </Link>
+      ) : (
+        <div />
+      )}
+
+      <div className="flex items-center">
+        {/* Notification Bell */}
+        <button
+          type="button"
+          aria-label="Notifications"
+          className="p-1.5 rounded-full hover:bg-gray-100 transition-colors cursor-pointer flex items-center justify-center"
+        >
           <Image
-            src="/logo.png"
-            alt="Obrin Health"
-            width={140}
-            height={50}
-            className="w-auto h-auto max-h-11.5 object-contain"
+            src="/bell.png"
+            alt="Notifications"
+            width={24}
+            height={24}
+            className="w-5.5 h-5.5 object-contain"
             priority
             unoptimized
           />
-        </Link>
-      </div>
+        </button>
 
-      {/* Navigation Sections */}
-      <nav className="flex-1 space-y-6">
-        {navSections.map((section) => (
-          <div key={section.title} className="space-y-1.5">
-            {/* Section Header */}
-            <div className="flex items-center justify-between px-4 py-2 text-[12px] font-medium tracking-wider text-[#8A9BA8] uppercase">
-              <span className="text-[#5D6B90]">{section.title}</span>
-              <ChevronRight className="w-4 h-4 text-[#5D6B90]" fontWeight={2} />
-            </div>
+        {/* Vertical Divider */}
+        <div className="h-6 w-[1.5px] bg-[#E4E7EC] mx-4" />
 
-            {/* Section Nav Items */}
-            <ul className="space-y-1">
-              {section.items.map((item) => {
-                const isActive =
-                  item.href === "/"
-                    ? pathname === "/"
-                    : pathname?.startsWith(item.href);
-
-                return (
-                  <li key={item.label}>
-                    <Link
-                      href={item.href}
-                      className={`flex items-center gap-3.5 px-4 py-3 rounded-xl transition-colors duration-150 text-[14px] ${
-                        isActive
-                          ? "bg-primary text-white font-semibold shadow-sm"
-                          : "text-[#253B4B] font-normal hover:bg-black/5"
-                      }`}
-                    >
-                      <Image
-                        src={item.icon}
-                        alt={item.label}
-                        width={20}
-                        height={20}
-                        priority
-                        unoptimized
-                        className={`w-5 h-5 object-contain ${
-                          isActive ? "brightness-0 invert" : ""
-                        }`}
-                      />
-                      <span>{item.label}</span>
-                    </Link>
-                  </li>
-                );
-              })}
-            </ul>
+        {/* User Profile */}
+        <div className="flex items-center gap-3 cursor-pointer group select-none">
+          {/* Avatar Circle */}
+          <div className="flex items-center justify-center size-10 rounded-full bg-[#D92D20] text-white font-semibold text-base shadow-xs shrink-0">
+            K
           </div>
-        ))}
-      </nav>
-    </aside>
+
+          {/* User Name & Role */}
+          <div className="flex flex-col text-left">
+            <div className="flex items-center gap-2">
+              <span className="text-[14px] font-semibold text-[#101828] leading-tight">
+                Kasongo Benawe...
+              </span>
+              <ChevronDown className="w-4 h-4 text-[#667085] transition-transform duration-200 group-hover:translate-y-0.5" />
+            </div>
+            <span className="text-[12px] font-normal text-[#667085] leading-tight mt-0.5">
+              Admin
+            </span>
+          </div>
+        </div>
+      </div>
+    </header>
   );
 };
 
