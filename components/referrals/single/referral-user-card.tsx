@@ -59,7 +59,7 @@ export const ReferralUserCard: React.FC<ReferralUserCardProps> = ({
           </div>
 
           <Link
-            href="/users/1"
+            href={`/users/${userId}`}
             className="text-[13px] font-semibold text-[#BB1A8C] hover:text-[#9B1373] hover:underline transition-colors shrink-0"
           >
             View user

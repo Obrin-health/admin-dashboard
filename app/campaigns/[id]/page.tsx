@@ -1,23 +1,31 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import CampaignHeaderCard from "@/components/campaigns/single/campaign-header-card";
 import CampaignOverviewTab from "@/components/campaigns/single/campaign-overview-tab";
 import CampaignAmbassadorsTab from "@/components/campaigns/single/campaign-ambassadors-tab";
 import CampaignAcquiredUsersTab from "@/components/campaigns/single/campaign-acquired-users-tab";
 
-export default function CampaignDetailPage() {
+function CampaignDetailContent() {
+  const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState<
     "Overview" | "Ambassadors" | "Acquired Users"
   >(() => {
-    if (typeof window !== "undefined") {
-      const params = new URLSearchParams(window.location.search);
-      const tab = params.get("tab");
-      if (tab === "ambassadors") return "Ambassadors";
-      if (tab === "acquired-users" || tab === "users") return "Acquired Users";
-    }
+    const tab = searchParams.get("tab");
+    if (tab === "ambassadors") return "Ambassadors";
+    if (tab === "acquired-users" || tab === "users") return "Acquired Users";
     return "Overview";
   });
+
+  const handleEditClick = () => {
+    // Navigate or trigger edit mode
+    setActiveTab("Overview");
+  };
+
+  const handlePauseClick = () => {
+    // Trigger pause campaign action
+  };
 
   return (
     <div className="w-full max-w-[1400px] mx-auto pb-12 font-sans select-none">
@@ -25,6 +33,8 @@ export default function CampaignDetailPage() {
       <CampaignHeaderCard
         activeTab={activeTab}
         onTabChange={setActiveTab}
+        onEditClick={handleEditClick}
+        onPauseClick={handlePauseClick}
       />
 
       {/* Tab 1: Overview (Image 2) */}
@@ -36,5 +46,13 @@ export default function CampaignDetailPage() {
       {/* Tab 3: Acquired Users (Image 4) */}
       {activeTab === "Acquired Users" && <CampaignAcquiredUsersTab />}
     </div>
+  );
+}
+
+export default function CampaignDetailPage() {
+  return (
+    <Suspense fallback={null}>
+      <CampaignDetailContent />
+    </Suspense>
   );
 }

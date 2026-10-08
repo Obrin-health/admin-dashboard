@@ -92,6 +92,14 @@ export const CampaignsTable: React.FC<{
   const [campaignToDelete, setCampaignToDelete] =
     useState<CampaignListRow | null>(null);
 
+  React.useEffect(() => {
+    setCampaignsList(initialCampaigns);
+  }, [initialCampaigns]);
+
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, selectedStatus, selectedType]);
+
   const filteredCampaigns = campaignsList.filter((camp) => {
     const matchesSearch = camp.name
       .toLowerCase()
@@ -102,6 +110,13 @@ export const CampaignsTable: React.FC<{
       selectedType === "All types" || camp.type === selectedType;
     return matchesSearch && matchesStatus && matchesType;
   });
+
+  const pageSize = 5;
+  const totalPages = Math.max(1, Math.ceil(filteredCampaigns.length / pageSize));
+  const paginatedCampaigns = filteredCampaigns.slice(
+    (currentPage - 1) * pageSize,
+    currentPage * pageSize
+  );
 
   return (
     <div className="space-y-4">
@@ -178,7 +193,7 @@ export const CampaignsTable: React.FC<{
               </tr>
             </thead>
             <tbody className="divide-y divide-[#EAECF0]">
-              {filteredCampaigns.map((camp) => (
+              {paginatedCampaigns.map((camp) => (
                 <tr
                   key={camp.id}
                   className="hover:bg-gray-50/60 transition-colors"
@@ -281,10 +296,10 @@ export const CampaignsTable: React.FC<{
           </table>
         </div>
 
-        {/* Footer with Pagination (Page 1 of 10) */}
+        {/* Footer with Pagination */}
         <div className="py-3.5 px-6 border-t border-[#EAECF0] flex items-center justify-between">
           <span className="text-[13px] text-[#667085]">
-            Page {currentPage} of 10
+            Page {currentPage} of {totalPages}
           </span>
           <div className="flex items-center gap-2">
             <button
@@ -297,8 +312,8 @@ export const CampaignsTable: React.FC<{
             </button>
             <button
               type="button"
-              disabled={currentPage >= 10}
-              onClick={() => setCurrentPage((p) => Math.min(10, p + 1))}
+              disabled={currentPage >= totalPages}
+              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
               className="px-3.5 py-1.5 rounded-lg border border-[#D0D5DD] bg-white text-[13px] font-medium text-[#344054] hover:bg-gray-50 transition-colors disabled:opacity-50 cursor-pointer shadow-2xs"
             >
               Next

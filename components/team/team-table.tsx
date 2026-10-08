@@ -31,6 +31,10 @@ export default function TeamTable({
   const roles = ["All Role", "Super Admin", "Admin", "Support"];
   const statuses = ["Status", "Active", "Inactive", "Disabled"];
 
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, roleFilter, statusFilter]);
+
   // Filter members
   const filteredMembers = members.filter((m) => {
     const matchesSearch =
@@ -42,6 +46,13 @@ export default function TeamTable({
       statusFilter === "Status" || m.status === statusFilter;
     return matchesSearch && matchesRole && matchesStatus;
   });
+
+  const pageSize = 5;
+  const totalPages = Math.max(1, Math.ceil(filteredMembers.length / pageSize));
+  const paginatedMembers = filteredMembers.slice(
+    (currentPage - 1) * pageSize,
+    currentPage * pageSize
+  );
 
   const getStatusBadge = (status: TeamMember["status"]) => {
     switch (status) {
@@ -163,7 +174,7 @@ export default function TeamTable({
                   </td>
                 </tr>
               ) : (
-                filteredMembers.map((member) => (
+                paginatedMembers.map((member) => (
                   <tr
                     key={member.id}
                     className="hover:bg-gray-50/70 transition-colors"
@@ -253,7 +264,9 @@ export default function TeamTable({
 
         {/* Pagination Footer */}
         <div className="flex items-center justify-between px-6 py-4 border-t border-[#EAECF0] bg-white">
-          <span className="text-[14px] text-[#667085]">Page {currentPage} of 10</span>
+          <span className="text-[14px] text-[#667085]">
+            Page {currentPage} of {totalPages}
+          </span>
 
           <div className="flex items-center gap-2.5">
             <button
@@ -266,8 +279,8 @@ export default function TeamTable({
             </button>
             <button
               type="button"
-              disabled={currentPage >= 10}
-              onClick={() => setCurrentPage((p) => p + 1)}
+              disabled={currentPage >= totalPages}
+              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
               className="px-4 py-2 rounded-xl border border-[#D0D5DD] bg-white text-[14px] font-medium text-[#344054] hover:bg-gray-50 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
             >
               Next

@@ -36,8 +36,8 @@ export const OnboardAmbassadorModal: React.FC<OnboardAmbassadorModalProps> = ({
 
     if (onSuccess) {
       onSuccess({
-        name,
-        contactNumber: contactNumber || "+234 8000000000",
+        name: name.trim(),
+        contactNumber: contactNumber.trim() || "",
         campaign,
         type,
       });

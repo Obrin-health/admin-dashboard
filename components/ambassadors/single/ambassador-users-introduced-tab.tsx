@@ -18,6 +18,8 @@ interface IntroducedUserRow {
   type: "Physical" | "Digital";
   referralDate: string;
   referralCode: string;
+  action: "Registered" | "Redeemed" | "Pending";
+  role: "User" | "Provider" | "Ambassador";
 }
 
 const mockIntroducedUsers: IntroducedUserRow[] = [
@@ -28,6 +30,8 @@ const mockIntroducedUsers: IntroducedUserRow[] = [
     type: "Physical",
     referralDate: "Sept, 10, 2023",
     referralCode: "OBR-2040",
+    action: "Registered",
+    role: "User",
   },
   {
     id: "2",
@@ -36,6 +40,8 @@ const mockIntroducedUsers: IntroducedUserRow[] = [
     type: "Digital",
     referralDate: "Sept, 10, 2023",
     referralCode: "OBR-2040",
+    action: "Redeemed",
+    role: "User",
   },
   {
     id: "3",
@@ -44,6 +50,8 @@ const mockIntroducedUsers: IntroducedUserRow[] = [
     type: "Digital",
     referralDate: "Sept, 10, 2023",
     referralCode: "OBR-2040",
+    action: "Pending",
+    role: "Provider",
   },
   {
     id: "4",
@@ -52,6 +60,8 @@ const mockIntroducedUsers: IntroducedUserRow[] = [
     type: "Physical",
     referralDate: "Sept, 10, 2023",
     referralCode: "OBR-2040",
+    action: "Registered",
+    role: "Ambassador",
   },
   {
     id: "5",
@@ -60,6 +70,8 @@ const mockIntroducedUsers: IntroducedUserRow[] = [
     type: "Digital",
     referralDate: "Sept, 10, 2023",
     referralCode: "OBR-2040",
+    action: "Redeemed",
+    role: "User",
   },
   {
     id: "6",
@@ -68,6 +80,8 @@ const mockIntroducedUsers: IntroducedUserRow[] = [
     type: "Physical",
     referralDate: "Sept, 10, 2023",
     referralCode: "OBR-2040",
+    action: "Registered",
+    role: "User",
   },
   {
     id: "7",
@@ -76,6 +90,8 @@ const mockIntroducedUsers: IntroducedUserRow[] = [
     type: "Physical",
     referralDate: "Sept, 10, 2023",
     referralCode: "OBR-2040",
+    action: "Pending",
+    role: "User",
   },
 ];
 
@@ -84,6 +100,18 @@ export const AmbassadorUsersIntroducedTab: React.FC = () => {
   const [selectedRole, setSelectedRole] = useState("All roles");
   const [selectedDate, setSelectedDate] = useState("May 2023 – May 2024");
   const [currentPage, setCurrentPage] = useState(1);
+
+  const filteredUsers = mockIntroducedUsers.filter((item) => {
+    const matchesAction =
+      selectedAction === "All actions" || item.action === selectedAction;
+    const matchesRole =
+      selectedRole === "All roles" || item.role === selectedRole;
+    const matchesDate =
+      selectedDate === "All Time" ||
+      selectedDate === "May 2023 – May 2024" ||
+      item.referralDate.includes(selectedDate);
+    return matchesAction && matchesRole && matchesDate;
+  });
 
   return (
     <div className="space-y-4">
@@ -177,7 +205,14 @@ export const AmbassadorUsersIntroducedTab: React.FC = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-[#EAECF0]">
-              {mockIntroducedUsers.map((item) => (
+              {filteredUsers.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="py-12 text-center text-[#667085]">
+                    No users found matching current filters.
+                  </td>
+                </tr>
+              ) : (
+                filteredUsers.map((item) => (
                 <tr
                   key={item.id}
                   className="hover:bg-gray-50/60 transition-colors"
@@ -245,7 +280,7 @@ export const AmbassadorUsersIntroducedTab: React.FC = () => {
                     </div>
                   </td>
                 </tr>
-              ))}
+              )))}
             </tbody>
           </table>
         </div>

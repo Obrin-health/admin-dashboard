@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import AmbassadorHeaderCard from "@/components/ambassadors/single/ambassador-header-card";
 import AmbassadorOverviewTab from "@/components/ambassadors/single/ambassador-overview-tab";
 import AmbassadorUsersIntroducedTab from "@/components/ambassadors/single/ambassador-users-introduced-tab";
@@ -8,16 +9,14 @@ import AmbassadorCampaignsTab from "@/components/ambassadors/single/ambassador-c
 import EditAmbassadorModal from "@/components/ambassadors/single/edit-ambassador-modal";
 import SuspendAmbassadorModal from "@/components/ambassadors/single/suspend-ambassador-modal";
 
-export default function AmbassadorDetailPage() {
+function AmbassadorDetailContent() {
+  const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState<
     "Overview" | "Users Introduced" | "Campaigns"
   >(() => {
-    if (typeof window !== "undefined") {
-      const params = new URLSearchParams(window.location.search);
-      const tab = params.get("tab");
-      if (tab === "users" || tab === "users-introduced") return "Users Introduced";
-      if (tab === "campaigns") return "Campaigns";
-    }
+    const tab = searchParams.get("tab");
+    if (tab === "users" || tab === "users-introduced") return "Users Introduced";
+    if (tab === "campaigns") return "Campaigns";
     return "Overview";
   });
 
@@ -56,5 +55,13 @@ export default function AmbassadorDetailPage() {
         ambassadorName="Emmanuel Adebayo"
       />
     </div>
+  );
+}
+
+export default function AmbassadorDetailPage() {
+  return (
+    <Suspense fallback={null}>
+      <AmbassadorDetailContent />
+    </Suspense>
   );
 }

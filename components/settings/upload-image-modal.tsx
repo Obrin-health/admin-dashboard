@@ -54,8 +54,14 @@ export default function UploadImageModal({
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      if (file.type !== "image/png" && file.type !== "image/jpeg") {
+        alert("Only PNG and JPEG images are allowed.");
+        e.target.value = "";
+        return;
+      }
       if (file.size > 2 * 1024 * 1024) {
         alert("Image file size exceeds 2MB limit.");
+        e.target.value = "";
         return;
       }
       const reader = new FileReader();

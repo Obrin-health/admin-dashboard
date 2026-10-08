@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
 import {
   Search,
@@ -153,9 +153,24 @@ export const UsersTable: React.FC<{ users?: UserRow[] }> = ({
         selectedSource === "All source" ||
         u.source.toLowerCase() === selectedSource.toLowerCase();
 
-      return matchesSearch && matchesCampaign && matchesSource;
+      const matchesDate = (() => {
+        if (selectedDate === "All time") return true;
+        if (selectedDate === "May 2023 - May 2024") {
+          return u.lastActiveDate.includes("2023") || u.lastActiveDate.includes("2024");
+        }
+        if (selectedDate === "Past 30 days" || selectedDate === "Past 90 days") {
+          return u.lastActiveDate.toLowerCase().includes("sept");
+        }
+        return true;
+      })();
+
+      return matchesSearch && matchesCampaign && matchesSource && matchesDate;
     });
-  }, [users, searchQuery, selectedCampaign, selectedSource]);
+  }, [users, searchQuery, selectedCampaign, selectedSource, selectedDate]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, selectedCampaign, selectedSource, selectedDate]);
 
   return (
     <div className="space-y-4">

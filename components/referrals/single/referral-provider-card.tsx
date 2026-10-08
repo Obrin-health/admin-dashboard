@@ -12,7 +12,7 @@ interface ReferralProviderCardProps {
 }
 
 export const ReferralProviderCard: React.FC<ReferralProviderCardProps> = ({
-  providerId = "Ikeja, PRV-0091",
+  providerId = "PRV-0091",
   name = "XYZ Clinic",
   location = "Ikeja, Lagos",
   initials = "JD",
@@ -43,7 +43,7 @@ export const ReferralProviderCard: React.FC<ReferralProviderCardProps> = ({
           </div>
 
           <Link
-            href="/provider/1"
+            href={`/provider/${providerId}`}
             className="text-[13px] font-semibold text-[#BB1A8C] hover:text-[#9B1373] hover:underline transition-colors shrink-0"
           >
             View provider

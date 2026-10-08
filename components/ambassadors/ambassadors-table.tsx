@@ -138,6 +138,15 @@ export const AmbassadorsTable: React.FC<{
   const isVisible = (id: string) =>
     columns.find((c) => c.id === id)?.visible ?? true;
 
+  const campaignOptions = [
+    "All campaigns",
+    ...Array.from(new Set(ambassadors.map((a) => a.activeCampaign).filter(Boolean))),
+  ];
+
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, selectedStatus, selectedCampaign, selectedSource, selectedDate]);
+
   // Filter ambassadors
   const filteredAmbassadors = ambassadors.filter((amb) => {
     const matchesSearch =
@@ -157,6 +166,13 @@ export const AmbassadorsTable: React.FC<{
 
     return matchesSearch && matchesStatus && matchesCampaign && matchesSource;
   });
+
+  const pageSize = 5;
+  const totalPages = Math.max(1, Math.ceil(filteredAmbassadors.length / pageSize));
+  const paginatedAmbassadors = filteredAmbassadors.slice(
+    (currentPage - 1) * pageSize,
+    currentPage * pageSize
+  );
 
   return (
     <div className="space-y-4">
@@ -233,12 +249,7 @@ export const AmbassadorsTable: React.FC<{
                 <ChevronDown className="size-3.5 text-[#667085]" />
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48">
-                {[
-                  "All campaigns",
-                  "Unilag Outreach",
-                  "Ambassador",
-                  "WhatsApp",
-                ].map((camp) => (
+                {campaignOptions.map((camp) => (
                   <DropdownMenuItem
                     key={camp}
                     onClick={() => setSelectedCampaign(camp)}
@@ -342,7 +353,7 @@ export const AmbassadorsTable: React.FC<{
                   </td>
                 </tr>
               ) : (
-                filteredAmbassadors.map((amb) => (
+                paginatedAmbassadors.map((amb) => (
                   <tr
                     key={amb.id}
                     className="hover:bg-gray-50/60 transition-colors"
@@ -462,7 +473,7 @@ export const AmbassadorsTable: React.FC<{
         {/* Table Footer with Pagination */}
         <div className="py-3.5 px-6 border-t border-[#EAECF0] flex items-center justify-between">
           <span className="text-[13px] text-[#667085]">
-            Page {currentPage} of 10
+            Page {currentPage} of {totalPages}
           </span>
           <div className="flex items-center gap-2">
             <button
@@ -475,8 +486,8 @@ export const AmbassadorsTable: React.FC<{
             </button>
             <button
               type="button"
-              disabled={currentPage >= 10}
-              onClick={() => setCurrentPage((p) => Math.min(10, p + 1))}
+              disabled={currentPage >= totalPages}
+              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
               className="px-3.5 py-1.5 rounded-lg border border-[#D0D5DD] bg-white text-[13px] font-medium text-[#344054] hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-2xs cursor-pointer"
             >
               Next

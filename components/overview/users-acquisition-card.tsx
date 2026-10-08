@@ -30,12 +30,46 @@ const acquisitionData2026: MonthlyData[] = [
   { month: "Dec", users: 1.2, displayValue: "1,200" },
 ];
 
+const acquisitionDataByYear: Record<string, MonthlyData[]> = {
+  "2026": acquisitionData2026,
+  "2025": [
+    { month: "Jan", users: 7.0, displayValue: "7,000" },
+    { month: "Feb", users: 4.2, displayValue: "4,200" },
+    { month: "Mar", users: 3.5, displayValue: "3,500" },
+    { month: "Apr", users: 4.8, displayValue: "4,800" },
+    { month: "May", users: 8.2, displayValue: "8,200" },
+    { month: "Jun", users: 2.1, displayValue: "2,100" },
+    { month: "Jul", users: 1.5, displayValue: "1,500" },
+    { month: "Aug", users: 1.8, displayValue: "1,800" },
+    { month: "Sep", users: 3.2, displayValue: "3,200" },
+    { month: "Oct", users: 4.6, displayValue: "4,600" },
+    { month: "Nov", users: 2.0, displayValue: "2,000" },
+    { month: "Dec", users: 1.8, displayValue: "1,800" },
+  ],
+  "2024": [
+    { month: "Jan", users: 5.0, displayValue: "5,000" },
+    { month: "Feb", users: 3.0, displayValue: "3,000" },
+    { month: "Mar", users: 2.2, displayValue: "2,200" },
+    { month: "Apr", users: 3.4, displayValue: "3,400" },
+    { month: "May", users: 6.0, displayValue: "6,000" },
+    { month: "Jun", users: 1.0, displayValue: "1,000" },
+    { month: "Jul", users: 0.8, displayValue: "800" },
+    { month: "Aug", users: 1.2, displayValue: "1,200" },
+    { month: "Sep", users: 2.0, displayValue: "2,000" },
+    { month: "Oct", users: 3.5, displayValue: "3,500" },
+    { month: "Nov", users: 1.1, displayValue: "1,100" },
+    { month: "Dec", users: 0.9, displayValue: "900" },
+  ],
+};
+
 const yAxisTicks = ["12k", "10k", "8k", "6k", "4k", "2k", "0"];
 const maxVal = 12.0;
 
 export const UsersAcquisitionCard: React.FC = () => {
   const [selectedYear, setSelectedYear] = useState("2026");
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
+
+  const currentData = acquisitionDataByYear[selectedYear] || acquisitionData2026;
 
   return (
     <div className="w-full rounded-2xl border border-[#EAECF0] bg-white p-5 sm:p-7 shadow-xs mb-6">
@@ -102,7 +136,7 @@ export const UsersAcquisitionCard: React.FC = () => {
 
           {/* Bars Grid */}
           <div className="h-56 relative grid grid-cols-12 gap-1 sm:gap-3 items-end px-2 sm:px-4 z-10">
-            {acquisitionData2026.map((item, idx) => {
+            {currentData.map((item, idx) => {
               const heightPercent = Math.min(100, (item.users / maxVal) * 100);
               const isHovered = hoveredIndex === idx;
 
@@ -137,7 +171,7 @@ export const UsersAcquisitionCard: React.FC = () => {
 
           {/* X Axis Month Labels */}
           <div className="grid grid-cols-12 gap-1 sm:gap-3 px-2 sm:px-4 items-center text-center mt-3">
-            {acquisitionData2026.map((item, idx) => (
+            {currentData.map((item, idx) => (
               <span
                 key={item.month}
                 className={`text-[12px] transition-colors ${

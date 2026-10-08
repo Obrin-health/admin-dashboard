@@ -27,7 +27,6 @@ interface CampaignHeaderCardProps {
   onTabChange: (tab: "Overview" | "Ambassadors" | "Acquired Users") => void;
   onEditClick?: () => void;
   onPauseClick?: () => void;
-  onEndClick?: () => void;
 }
 
 interface AmbassadorTag {
@@ -144,20 +143,24 @@ export const CampaignHeaderCard: React.FC<CampaignHeaderCardProps> = ({
                 align="end"
                 className="w-48 p-1.5 shadow-lg rounded-xl border border-gray-100 bg-white"
               >
-                <DropdownMenuItem
-                  onClick={onEditClick}
-                  className="text-[13px] font-medium text-[#101828] py-2 px-3 cursor-pointer hover:bg-gray-50 rounded-lg flex items-center gap-2"
-                >
-                  <Edit className="size-4 text-[#667085]" />
-                  <span>Edit Campaign</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={onPauseClick}
-                  className="text-[13px] font-medium text-[#101828] py-2 px-3 cursor-pointer hover:bg-gray-50 rounded-lg flex items-center gap-2"
-                >
-                  <PauseCircle className="size-4 text-[#667085]" />
-                  <span>Pause Campaign</span>
-                </DropdownMenuItem>
+                {onEditClick && (
+                  <DropdownMenuItem
+                    onClick={onEditClick}
+                    className="text-[13px] font-medium text-[#101828] py-2 px-3 cursor-pointer hover:bg-gray-50 rounded-lg flex items-center gap-2"
+                  >
+                    <Edit className="size-4 text-[#667085]" />
+                    <span>Edit Campaign</span>
+                  </DropdownMenuItem>
+                )}
+                {onPauseClick && (
+                  <DropdownMenuItem
+                    onClick={onPauseClick}
+                    className="text-[13px] font-medium text-[#101828] py-2 px-3 cursor-pointer hover:bg-gray-50 rounded-lg flex items-center gap-2"
+                  >
+                    <PauseCircle className="size-4 text-[#667085]" />
+                    <span>Pause Campaign</span>
+                  </DropdownMenuItem>
+                )}
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
                   onClick={() => setIsDeleteModalOpen(true)}

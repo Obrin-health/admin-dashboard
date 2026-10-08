@@ -4,9 +4,9 @@ import React, { useState } from "react";
 import { Eye, EyeOff, CheckCircle2 } from "lucide-react";
 
 export default function PasswordForm() {
-  const [currentPassword, setCurrentPassword] = useState("password12345678");
-  const [newPassword, setNewPassword] = useState("password12345678");
-  const [confirmPassword, setConfirmPassword] = useState("password12345678");
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
 
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);

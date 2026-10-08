@@ -26,7 +26,9 @@ const mockTimelineEvents: TimelineEvent[] = [
   },
 ];
 
-export const ReferralHistoryTimeline: React.FC = () => {
+export const ReferralHistoryTimeline: React.FC<{
+  events?: TimelineEvent[];
+}> = ({ events = mockTimelineEvents }) => {
   return (
     <div className="w-full pt-8">
       {/* Uppercase Header */}
@@ -36,8 +38,8 @@ export const ReferralHistoryTimeline: React.FC = () => {
 
       {/* Vertical Timeline */}
       <div className="relative pl-1">
-        {mockTimelineEvents.map((item, index) => {
-          const isLast = index === mockTimelineEvents.length - 1;
+        {events.map((item, index) => {
+          const isLast = index === events.length - 1;
           return (
             <div key={item.id} className="relative flex items-start gap-4 pb-8 group">
               {/* Connecting vertical line */}

@@ -54,12 +54,23 @@ export default function EditTeamMemberModal({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    const trimmedName = name.trim();
+    const initials = trimmedName
+      .split(/\s+/)
+      .filter(Boolean)
+      .map((w) => w[0])
+      .slice(0, 2)
+      .join("")
+      .toUpperCase();
+    const avatarInitials = initials || member.avatarInitials;
+
     onSave({
       ...member,
-      name,
-      email,
+      name: trimmedName,
+      email: email.trim(),
       role,
       status,
+      avatarInitials,
     });
     onClose();
   };

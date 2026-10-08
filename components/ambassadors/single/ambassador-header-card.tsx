@@ -27,10 +27,14 @@ export const AmbassadorHeaderCard: React.FC<AmbassadorHeaderCardProps> = ({
   const [copied, setCopied] = useState(false);
   const referralLink = "obrin.health/join/AMB00156";
 
-  const handleCopy = () => {
-    navigator.clipboard.writeText(referralLink);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(referralLink);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // Rejection handled without showing copied state
+    }
   };
 
   const miniStats = [

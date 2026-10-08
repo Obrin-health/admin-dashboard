@@ -81,6 +81,9 @@ const mockCampaignAmbassadors: CampaignAmbassadorRow[] = [
 ];
 
 export const CampaignAmbassadorsTab: React.FC = () => {
+  const [ambassadorsList, setAmbassadorsList] = useState<CampaignAmbassadorRow[]>(
+    mockCampaignAmbassadors
+  );
   const [selectedAction, setSelectedAction] = useState("All actions");
   const [selectedRole, setSelectedRole] = useState("All roles");
   const [selectedDate, setSelectedDate] = useState("May 2023 – May 2024");
@@ -90,10 +93,10 @@ export const CampaignAmbassadorsTab: React.FC = () => {
 
   return (
     <div className="space-y-4">
-      {/* Header matching Image 3 */}
+      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-1">
         <h3 className="text-[18px] font-bold text-[#101828]">
-          Recent Campaign Acquired Users
+          Campaign Ambassadors
         </h3>
 
         <div className="flex flex-wrap items-center gap-2.5">
@@ -179,7 +182,7 @@ export const CampaignAmbassadorsTab: React.FC = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-[#EAECF0]">
-              {mockCampaignAmbassadors.map((row) => (
+              {ambassadorsList.map((row) => (
                 <tr key={row.id} className="hover:bg-gray-50/60 transition-colors">
                   {/* Ambassador */}
                   <td className="py-4 px-6 text-[#101828] font-medium whitespace-nowrap">
@@ -286,6 +289,14 @@ export const CampaignAmbassadorsTab: React.FC = () => {
       <RemoveAmbassadorModal
         isOpen={!!selectedAmbassadorToRemove}
         onClose={() => setSelectedAmbassadorToRemove(null)}
+        onConfirm={() => {
+          if (selectedAmbassadorToRemove) {
+            setAmbassadorsList((prev) =>
+              prev.filter((a) => a.id !== selectedAmbassadorToRemove.id)
+            );
+            setSelectedAmbassadorToRemove(null);
+          }
+        }}
         ambassadorName={selectedAmbassadorToRemove?.ambassadorName || "James Werinipre"}
         avatarUrl="/james-werinipre.jpg"
       />

@@ -49,7 +49,6 @@ export const CreateCampaignModal: React.FC<CreateCampaignModalProps> = ({
   const [description, setDescription] = useState("");
   const [startDate, setStartDate] = useState("11-10-2024");
   const [endDate, setEndDate] = useState("11-10-2024");
-  const [ambassadorsCount, setAmbassadorsCount] = useState("4 Ambassadors added");
 
   const [ambassadors, setAmbassadors] = useState([
     { id: "1", name: "Peter Johnson", initial: "P" },
@@ -149,7 +148,7 @@ export const CreateCampaignModal: React.FC<CreateCampaignModalProps> = ({
                     <ChevronDown className="size-4 text-[#667085]" />
                   </DropdownMenuTrigger>
                   <DropdownMenuContent className="w-[500px]">
-                    {["Physical", "Digital", "Hybrid"].map((t) => (
+                    {["Physical", "Digital"].map((t) => (
                       <DropdownMenuItem
                         key={t}
                         onClick={() => setCampaignType(t)}
@@ -251,7 +250,7 @@ export const CreateCampaignModal: React.FC<CreateCampaignModalProps> = ({
 
                 <div>
                   <label className="block text-[13px] font-medium text-[#344054] mb-1.5">
-                    Start Date
+                    End Date
                   </label>
                   <div className="relative flex items-center">
                     <input
@@ -272,7 +271,7 @@ export const CreateCampaignModal: React.FC<CreateCampaignModalProps> = ({
                 </label>
                 <DropdownMenu>
                   <DropdownMenuTrigger className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-lg border border-[#D0D5DD] bg-white text-[13px] text-[#101828] hover:bg-gray-50 focus:outline-none focus:border-[#BB1A8C] transition-colors cursor-pointer text-left">
-                    <span>{ambassadorsCount}</span>
+                    <span>{ambassadors.length} Ambassadors added</span>
                     <ChevronDown className="size-4 text-[#667085]" />
                   </DropdownMenuTrigger>
                   <DropdownMenuContent className="w-[500px]">
@@ -285,11 +284,11 @@ export const CreateCampaignModal: React.FC<CreateCampaignModalProps> = ({
                       <DropdownMenuItem
                         key={name}
                         onClick={() => {
+                          if (ambassadors.some((a) => a.name === name)) return;
                           setAmbassadors((prev) => [
                             ...prev,
                             { id: String(Date.now()), name, initial: name[0] },
                           ]);
-                          setAmbassadorsCount(`${ambassadors.length + 1} Ambassadors added`);
                         }}
                         className="text-[13px] cursor-pointer"
                       >

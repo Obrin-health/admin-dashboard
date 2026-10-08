@@ -31,14 +31,17 @@ export default function AddTeamMemberModal({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!firstName || !lastName || !email) {
+    const trimmedFirst = firstName.trim();
+    const trimmedLast = lastName.trim();
+    const trimmedEmail = email.trim();
+    if (!trimmedFirst || !trimmedLast || !trimmedEmail) {
       alert("Please fill in all required fields.");
       return;
     }
     onSubmit({
-      firstName,
-      lastName,
-      email,
+      firstName: trimmedFirst,
+      lastName: trimmedLast,
+      email: trimmedEmail,
       role: role || "Admin",
     });
     // Reset form

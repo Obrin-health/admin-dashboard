@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import CampaignsMetricsCard from "@/components/campaigns/campaigns-metrics-card";
 import CampaignsTable, {
   CampaignListRow,
@@ -8,21 +9,15 @@ import CampaignsTable, {
 } from "@/components/campaigns/campaigns-table";
 import CreateCampaignModal from "@/components/campaigns/create-campaign-modal";
 
-export default function CampaignsPage() {
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(() => {
-    if (typeof window !== "undefined") {
-      const params = new URLSearchParams(window.location.search);
-      return params.get("modal") === "create" || params.get("modal") === "success";
-    }
-    return false;
-  });
-  const [initialModalStep] = useState<"form" | "success">(() => {
-    if (typeof window !== "undefined") {
-      const params = new URLSearchParams(window.location.search);
-      return params.get("modal") === "success" ? "success" : "form";
-    }
-    return "form";
-  });
+function CampaignsPageContent() {
+  const searchParams = useSearchParams();
+  const modalParam = searchParams.get("modal");
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(
+    () => modalParam === "create" || modalParam === "success"
+  );
+  const [initialModalStep] = useState<"form" | "success">(
+    () => (modalParam === "success" ? "success" : "form")
+  );
   const [campaignsList, setCampaignsList] = useState<CampaignListRow[]>(
     initialMockCampaignsList
   );
@@ -79,5 +74,13 @@ export default function CampaignsPage() {
         onSuccess={handleCreateSuccess}
       />
     </div>
+  );
+}
+
+export default function CampaignsPage() {
+  return (
+    <Suspense fallback={null}>
+      <CampaignsPageContent />
+    </Suspense>
   );
 }

@@ -31,12 +31,15 @@ function AmbassadorsPageContent() {
     const created: AmbassadorRow = {
       id: String(Date.now()),
       name: newAmb.name,
-      avatarText: newAmb.name
-        .split(" ")
-        .map((p) => p[0])
-        .slice(0, 2)
-        .join("")
-        .toUpperCase() || "JD",
+      avatarText:
+        newAmb.name
+          .trim()
+          .split(/\s+/)
+          .filter(Boolean)
+          .map((p) => p[0])
+          .slice(0, 2)
+          .join("")
+          .toUpperCase() || "JD",
       contactNumber: newAmb.contactNumber,
       activeCampaign: newAmb.campaign,
       type: newAmb.type,
@@ -76,10 +79,7 @@ function AmbassadorsPageContent() {
       {viewState === "data" ? (
         <AmbassadorsTable ambassadors={ambassadorsList} />
       ) : (
-        <AmbassadorsEmptyState
-          dashboardHref="/"
-          onActionClick={() => setViewState("data")}
-        />
+        <AmbassadorsEmptyState dashboardHref="/" />
       )}
 
       {/* Onboard Ambassador Modal */}

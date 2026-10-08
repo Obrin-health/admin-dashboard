@@ -26,7 +26,7 @@ export default function TeamMetricsCard({
             Total Members
           </p>
           <p className="text-[32px] font-bold text-[#101828] leading-none">
-            {totalMembers}
+            {formatNumber(totalMembers)}
           </p>
         </div>
 
@@ -36,7 +36,7 @@ export default function TeamMetricsCard({
             Active Members
           </p>
           <p className="text-[32px] font-bold text-[#101828] leading-none">
-            {activeMembers}
+            {formatNumber(activeMembers)}
           </p>
         </div>
 

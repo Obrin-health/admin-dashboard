@@ -149,7 +149,14 @@ export const AmbassadorCampaignsTab: React.FC = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-[#EAECF0]">
-              {filteredCampaigns.map((camp) => (
+              {filteredCampaigns.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="py-12 text-center text-[#667085]">
+                    No campaigns found matching current filters.
+                  </td>
+                </tr>
+              ) : (
+                filteredCampaigns.map((camp) => (
                 <tr
                   key={camp.id}
                   className="hover:bg-gray-50/60 transition-colors"
@@ -226,7 +233,7 @@ export const AmbassadorCampaignsTab: React.FC = () => {
                     </div>
                   </td>
                 </tr>
-              ))}
+              )))}
             </tbody>
           </table>
         </div>
