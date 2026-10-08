@@ -4,7 +4,14 @@ import React, { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Eye, EyeOff, X } from "lucide-react";
+import { Eye, EyeOff } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 
 export default function ResetPasswordPage() {
   const router = useRouter();
@@ -13,17 +20,45 @@ export default function ResetPasswordPage() {
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isSuccessOpen, setIsSuccessOpen] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Validation rules matching screenshot
+  // Validation rules matching screenshot checklist
   const hasMinLength = newPassword.length >= 8;
   const hasUppercase = /[A-Z]/.test(newPassword);
   const hasLowercase = /[a-z]/.test(newPassword);
   const hasNumber = /[0-9]/.test(newPassword);
   const hasSpecial = /[^A-Za-z0-9]/.test(newPassword);
+  const allCriteriaMet =
+    hasMinLength && hasUppercase && hasLowercase && hasNumber && hasSpecial;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsSuccessOpen(true);
+    setError(null);
+
+    // Validate that newPassword satisfies every checklist requirement
+    if (!allCriteriaMet) {
+      setError("Please ensure your password meets all requirements below.");
+      return;
+    }
+
+    // Require confirmPassword to equal newPassword
+    if (newPassword !== confirmPassword) {
+      setError("Passwords do not match. Please verify and try again.");
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      // Simulate authorized password-reset request for the identified account
+      await new Promise((resolve) => setTimeout(resolve, 400));
+      setIsSuccessOpen(true);
+    } catch {
+      setError("Failed to reset password. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleModalClose = () => {
@@ -62,6 +97,12 @@ export default function ResetPasswordPage() {
           </p>
         </div>
 
+        {error && (
+          <div className="mb-5 p-3.5 text-xs text-red-700 bg-red-50 border border-red-200 rounded-[12px]">
+            {error}
+          </div>
+        )}
+
         <form onSubmit={handleSubmit} className="space-y-5">
           {/* New Password */}
           <div>
@@ -73,14 +114,17 @@ export default function ResetPasswordPage() {
                 type={showNewPassword ? "text" : "password"}
                 required
                 value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
+                onChange={(e) => {
+                  setNewPassword(e.target.value);
+                  if (error) setError(null);
+                }}
                 placeholder="Enter new password"
                 className="w-full px-4 py-3 pr-11 text-sm text-[#101828] placeholder-[#98A2B3] bg-white border border-[#D0D5DD] rounded-[14px] focus:outline-none focus:border-[#BB1A8C] focus:ring-1 focus:ring-[#BB1A8C] transition-all"
               />
               <button
                 type="button"
                 onClick={() => setShowNewPassword(!showNewPassword)}
-                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#98A2B3] hover:text-[#667085] transition-colors p-1"
+                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#98A2B3] hover:text-[#667085] transition-colors p-1 cursor-pointer"
                 aria-label={showNewPassword ? "Hide password" : "Show password"}
               >
                 {showNewPassword ? (
@@ -111,14 +155,17 @@ export default function ResetPasswordPage() {
                 type={showConfirmPassword ? "text" : "password"}
                 required
                 value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
+                onChange={(e) => {
+                  setConfirmPassword(e.target.value);
+                  if (error) setError(null);
+                }}
                 placeholder="Confirm new password"
                 className="w-full px-4 py-3 pr-11 text-sm text-[#101828] placeholder-[#98A2B3] bg-white border border-[#D0D5DD] rounded-[14px] focus:outline-none focus:border-[#BB1A8C] focus:ring-1 focus:ring-[#BB1A8C] transition-all"
               />
               <button
                 type="button"
                 onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#98A2B3] hover:text-[#667085] transition-colors p-1"
+                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#98A2B3] hover:text-[#667085] transition-colors p-1 cursor-pointer"
                 aria-label={showConfirmPassword ? "Hide password" : "Show password"}
               >
                 {showConfirmPassword ? (
@@ -134,9 +181,10 @@ export default function ResetPasswordPage() {
           <div className="pt-2">
             <button
               type="submit"
-              className="w-full py-3.5 bg-[#BB1A8C] hover:bg-[#A31478] active:scale-[0.99] text-white font-semibold text-sm rounded-[16px] transition-all shadow-sm cursor-pointer"
+              disabled={isSubmitting}
+              className="w-full py-3.5 bg-[#BB1A8C] hover:bg-[#A31478] active:scale-[0.99] text-white font-semibold text-sm rounded-[16px] transition-all shadow-sm cursor-pointer disabled:opacity-70"
             >
-              Sign in
+              {isSubmitting ? "Resetting password..." : "Reset password"}
             </button>
           </div>
 
@@ -155,20 +203,18 @@ export default function ResetPasswordPage() {
         </form>
       </div>
 
-      {/* Password Changed Modal */}
-      {isSuccessOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-xs animate-in fade-in duration-200">
-          <div className="relative w-full max-w-[420px] bg-white rounded-[32px] p-8 sm:p-10 text-center shadow-2xl animate-in zoom-in-95 duration-200">
-            {/* Close Button */}
-            <button
-              type="button"
-              onClick={handleModalClose}
-              className="absolute right-6 top-6 text-gray-400 hover:text-gray-600 transition-colors p-1"
-              aria-label="Close"
-            >
-              <X className="w-5 h-5" />
-            </button>
-
+      {/* Accessible Password Changed Modal */}
+      <Dialog
+        open={isSuccessOpen}
+        onOpenChange={(open) => {
+          if (!open) handleModalClose();
+        }}
+      >
+        <DialogContent
+          showCloseButton
+          className="max-w-[420px] rounded-[32px] p-8 sm:p-10 text-center"
+        >
+          <DialogHeader className="items-center text-center">
             {/* Checkmark Circle Icon */}
             <div className="w-24 h-24 mx-auto mb-6 rounded-full border-[5px] border-[#BB1A8C] flex items-center justify-center text-[#BB1A8C]">
               <svg
@@ -183,25 +229,23 @@ export default function ResetPasswordPage() {
               </svg>
             </div>
 
-            {/* Title & Description */}
-            <h2 className="text-xl sm:text-2xl font-bold text-[#101828] mb-2.5">
+            <DialogTitle className="text-xl sm:text-2xl font-bold text-[#101828] mb-2.5">
               Password Changed
-            </h2>
-            <p className="text-sm text-[#667085] leading-relaxed max-w-[320px] mx-auto mb-8 font-normal">
+            </DialogTitle>
+            <DialogDescription className="text-sm text-[#667085] leading-relaxed max-w-[320px] mx-auto mb-6 font-normal">
               You account password have been successfully changed. Log in with your new password now
-            </p>
+            </DialogDescription>
+          </DialogHeader>
 
-            {/* Log in Now Button */}
-            <button
-              type="button"
-              onClick={handleLoginRedirect}
-              className="w-full py-3.5 bg-[#BB1A8C] hover:bg-[#A31478] active:scale-[0.99] text-white font-semibold text-sm rounded-[16px] transition-all shadow-sm cursor-pointer"
-            >
-              Log in Now
-            </button>
-          </div>
-        </div>
-      )}
+          <button
+            type="button"
+            onClick={handleLoginRedirect}
+            className="w-full py-3.5 bg-[#BB1A8C] hover:bg-[#A31478] active:scale-[0.99] text-white font-semibold text-sm rounded-[16px] transition-all shadow-sm cursor-pointer"
+          >
+            Log in Now
+          </button>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

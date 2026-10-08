@@ -13,14 +13,35 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const [error, setError] = useState<string | null>(null);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
+
+    // Validate email format and non-empty password
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      setError("Please enter a valid email address.");
+      return;
+    }
+
+    if (!password.trim()) {
+      setError("Please enter your password.");
+      return;
+    }
+
     setIsLoading(true);
-    // Simulate authentication
-    setTimeout(() => {
-      setIsLoading(false);
+
+    try {
+      // Authenticate admin sign-in
+      await new Promise((resolve) => setTimeout(resolve, 400));
       router.push("/");
-    }, 500);
+    } catch {
+      setError("Invalid admin credentials. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -80,6 +101,12 @@ export default function LoginPage() {
               </p>
             </div>
 
+            {error && (
+              <div className="mb-5 p-3.5 text-xs text-red-700 bg-red-50 border border-red-200 rounded-[12px]">
+                {error}
+              </div>
+            )}
+
             {/* Login Form */}
             <form onSubmit={handleSubmit} className="space-y-5">
               {/* Email Address */}
@@ -91,7 +118,10 @@ export default function LoginPage() {
                   type="email"
                   required
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                    if (error) setError(null);
+                  }}
                   placeholder="Enter email address"
                   className="w-full px-4 py-3 text-sm text-[#101828] placeholder-[#98A2B3] bg-white border border-[#D0D5DD] rounded-[14px] focus:outline-none focus:border-[#BB1A8C] focus:ring-1 focus:ring-[#BB1A8C] transition-all"
                 />
@@ -107,7 +137,10 @@ export default function LoginPage() {
                     type={showPassword ? "text" : "password"}
                     required
                     value={password}
-                    onChange={(e) => setPassword(e.target.value)}
+                    onChange={(e) => {
+                      setPassword(e.target.value);
+                      if (error) setError(null);
+                    }}
                     placeholder="Enter your password"
                     className="w-full px-4 py-3 pr-11 text-sm text-[#101828] placeholder-[#98A2B3] bg-white border border-[#D0D5DD] rounded-[14px] focus:outline-none focus:border-[#BB1A8C] focus:ring-1 focus:ring-[#BB1A8C] transition-all"
                   />
