@@ -10,6 +10,14 @@ const Navbar = () => {
   const pathname = usePathname();
   const isProviderDetails =
     pathname?.startsWith("/provider/") && pathname !== "/provider";
+  const isUserDetails =
+    pathname?.startsWith("/users/") && pathname !== "/users";
+  const isAmbassadorDetails =
+    pathname?.startsWith("/ambassadors/") && pathname !== "/ambassadors";
+  const isCampaignDetails =
+    pathname?.startsWith("/campaigns/") && pathname !== "/campaigns";
+  const isReferralDetails =
+    pathname?.startsWith("/referrals/") && pathname !== "/referrals";
 
   return (
     <header className="w-full shrink-0 flex items-center justify-between pb-6 font-sans">
@@ -20,6 +28,38 @@ const Navbar = () => {
         >
           <ArrowLeft className="w-4 h-4 text-[#101828]" />
           <span>Back to providers</span>
+        </Link>
+      ) : isUserDetails ? (
+        <Link
+          href="/users"
+          className="inline-flex items-center gap-2.5 text-[#101828] font-semibold text-sm hover:opacity-80 transition-opacity cursor-pointer"
+        >
+          <ArrowLeft className="w-4 h-4 text-[#101828]" />
+          <span>Back to users</span>
+        </Link>
+      ) : isAmbassadorDetails ? (
+        <Link
+          href="/ambassadors"
+          className="inline-flex items-center gap-2.5 text-[#101828] font-semibold text-sm hover:opacity-80 transition-opacity cursor-pointer"
+        >
+          <ArrowLeft className="w-4 h-4 text-[#101828]" />
+          <span>Back to Ambassadors</span>
+        </Link>
+      ) : isCampaignDetails ? (
+        <Link
+          href="/campaigns"
+          className="inline-flex items-center gap-2.5 text-[#101828] font-semibold text-sm hover:opacity-80 transition-opacity cursor-pointer"
+        >
+          <ArrowLeft className="w-4 h-4 text-[#101828]" />
+          <span>Back to Campaigns</span>
+        </Link>
+      ) : isReferralDetails ? (
+        <Link
+          href="/referrals"
+          className="inline-flex items-center gap-2.5 text-[#101828] font-semibold text-sm hover:opacity-80 transition-opacity cursor-pointer"
+        >
+          <ArrowLeft className="w-4 h-4 text-[#101828]" />
+          <span>Back to Referrals</span>
         </Link>
       ) : (
         <div />

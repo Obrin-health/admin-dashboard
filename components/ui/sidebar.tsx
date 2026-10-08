@@ -66,6 +66,11 @@ const navSections: NavSection[] = [
         href: "/settings",
         icon: "/sidebar-icons/setting-2.png",
       },
+      {
+        label: "Team",
+        href: "/team",
+        icon: "/sidebar-icons/users.png",
+      },
     ],
   },
 ];
