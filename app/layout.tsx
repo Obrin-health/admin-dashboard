@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Manrope } from "next/font/google";
 import "./globals.css";
-import AppShell from "@/components/layout/app-shell";
+import QueryProvider from "@/providers/query-provider";
 
 const manrope = Manrope({
   variable: "--font-manrope",
@@ -32,7 +32,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         />
       </head>
       <body className="h-screen w-screen overflow-hidden bg-background">
-        <AppShell>{children}</AppShell>
+        <QueryProvider>{children}</QueryProvider>
       </body>
     </html>
   );

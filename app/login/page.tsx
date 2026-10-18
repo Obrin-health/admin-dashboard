@@ -3,17 +3,18 @@
 import React, { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { Eye, EyeOff } from "lucide-react";
+import { useLogin } from "@/hooks/use-auth";
+import { getApiErrorMessage } from "@/lib/api";
 
 export default function LoginPage() {
-  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-
   const [error, setError] = useState<string | null>(null);
+
+  const loginMutation = useLogin();
+  const isLoading = loginMutation.isPending;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -31,16 +32,12 @@ export default function LoginPage() {
       return;
     }
 
-    setIsLoading(true);
-
     try {
-      // Authenticate admin sign-in
-      await new Promise((resolve) => setTimeout(resolve, 400));
-      router.push("/");
-    } catch {
-      setError("Invalid admin credentials. Please try again.");
-    } finally {
-      setIsLoading(false);
+      await loginMutation.mutateAsync({ email, password });
+    } catch (err) {
+      setError(
+        getApiErrorMessage(err, "Invalid admin credentials. Please try again.")
+      );
     }
   };
 
@@ -53,6 +50,7 @@ export default function LoginPage() {
               src="/white-silk-fabric-with-elegant-texture-shiny-surface 1.png"
               alt="Obrin Silk Texture"
               fill
+              sizes="(max-width: 1024px) 100vw, 50vw"
               className="object-cover select-none"
               priority
             />

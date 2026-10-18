@@ -4,6 +4,7 @@ import React from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
+import { useCurrentUser } from "@/hooks/use-auth";
 
 interface ActionItem {
   title: string;
@@ -35,11 +36,17 @@ const actionItems: ActionItem[] = [
 ];
 
 export const QuickActionsCard: React.FC = () => {
+  const { data: user } = useCurrentUser();
+  const greetingName =
+    user?.firstName ||
+    (user?.fullName ? user.fullName.split(" ")[0] : null) ||
+    "Admin";
+
   return (
     <div className="w-full rounded-2xl border border-[#EAECF0] bg-[#FAFAFC] p-5 sm:p-6 mb-6 transition-all">
       <div className="mb-4">
         <h2 className="text-[17px] sm:text-[18px] font-semibold text-[#101828] flex items-center gap-1.5">
-          <span>Welcome John Doe!</span>
+          <span>Welcome {greetingName}!</span>
           <span className="inline-block animate-wave origin-[70%_70%]">👋</span>
         </h2>
         <p className="text-[13px] text-[#667085] mt-0.5">

@@ -1,20 +1,21 @@
-"use client";
-
 import React from "react";
-import { usePathname } from "next/navigation";
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
+import { AUTH_COOKIE_NAME } from "@/types/auth";
 import Sidebar from "@/components/ui/sidebar";
 import Navbar from "@/components/ui/navbar";
 
-export default function AppShell({ children }: { children: React.ReactNode }) {
-  const pathname = usePathname();
-  const isAuthPage = pathname === "/login" || pathname === "/reset-password";
+export default async function DashboardLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  const cookieStore = await cookies();
+  const token = cookieStore.get(AUTH_COOKIE_NAME)?.value;
 
-  if (isAuthPage) {
-    return (
-      <main className="w-full h-screen overflow-y-auto bg-[#F9FAFB] font-sans">
-        {children}
-      </main>
-    );
+  // Restrict unauthorized access: redirect to login if no auth token cookie exists
+  if (!token) {
+    redirect("/login");
   }
 
   return (
