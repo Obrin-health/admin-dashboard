@@ -1,11 +1,11 @@
 "use client";
 
-import React from "react";
+import React, { Suspense } from "react";
 import Link from "next/link";
 import ReferralsMetricsCard from "@/components/referrals/referrals-metrics-card";
 import ReferralsTable from "@/components/referrals/referrals-table";
 
-export default function ReferralsPage() {
+function ReferralsPageContent() {
   return (
     <div className="w-full max-w-[1400px] mx-auto pb-12 font-sans select-none">
       {/* Page Header */}
@@ -32,5 +32,13 @@ export default function ReferralsPage() {
       {/* Referrals Table with Search, Filter & Pagination */}
       <ReferralsTable />
     </div>
+  );
+}
+
+export default function ReferralsPage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-[#667085] text-sm">Loading referrals...</div>}>
+      <ReferralsPageContent />
+    </Suspense>
   );
 }

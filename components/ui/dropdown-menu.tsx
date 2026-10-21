@@ -34,6 +34,7 @@ function DropdownMenuContent({
         sideOffset={sideOffset}
         align={align}
         side={side}
+        className="z-50"
       >
         <MenuPrimitive.Popup
           data-slot="dropdown-menu-content"
@@ -131,11 +132,11 @@ function DropdownMenuLabel({
   className,
   inset,
   ...props
-}: MenuPrimitive.GroupLabel.Props & {
+}: React.ComponentProps<"div"> & {
   inset?: boolean;
 }) {
   return (
-    <MenuPrimitive.GroupLabel
+    <div
       data-slot="dropdown-menu-label"
       className={cn(
         "px-3 py-1.5 text-xs font-semibold text-[#8A9BA8]",

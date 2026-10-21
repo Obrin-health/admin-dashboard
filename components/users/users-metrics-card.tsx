@@ -1,25 +1,34 @@
 "use client";
 
 import React from "react";
+import { useUsersSummary } from "@/hooks/use-users";
 
-interface MetricItem {
-  label: string;
-  value: string;
+function formatValue(val?: number): string {
+  if (val === undefined || val === null) return "0";
+  if (val >= 1_000_000) {
+    return `${(val / 1_000_000).toFixed(1).replace(/\.0$/, "")}M`;
+  }
+  if (val >= 10_000) {
+    return `${(val / 1_000).toFixed(1).replace(/\.0$/, "")}k`;
+  }
+  return val.toLocaleString();
 }
 
-const row1: MetricItem[] = [
-  { label: "Total Users", value: "3.2k" },
-  { label: "Active Users", value: "1.2k" },
-  { label: "New Users", value: "200" },
-];
-
-const row2: MetricItem[] = [
-  { label: "With Referrals", value: "3.2k" },
-  { label: "Redeemed Referrals", value: "1.2k" },
-  { label: "Converted Users", value: "200" },
-];
-
 export const UsersMetricsCard: React.FC = () => {
+  const { data, isLoading } = useUsersSummary();
+
+  const row1 = [
+    { label: "Total Users", value: formatValue(data?.totalUsers) },
+    { label: "Active Users", value: formatValue(data?.activeUsers) },
+    { label: "New Users", value: formatValue(data?.newUsers) },
+  ];
+
+  const row2 = [
+    { label: "With Referrals", value: formatValue(data?.usersWithReferrals) },
+    { label: "Redeemed Referrals", value: formatValue(data?.redeemedReferrals) },
+    { label: "Converted Users", value: formatValue(data?.convertedUsers) },
+  ];
+
   return (
     <div className="w-full rounded-2xl border border-[#EAECF0] bg-white p-6 md:p-8 mb-6 shadow-xs">
       {/* Row 1 */}
@@ -34,9 +43,13 @@ export const UsersMetricsCard: React.FC = () => {
             <span className="text-[13px] font-normal text-[#667085]">
               {item.label}
             </span>
-            <p className="font-general-sans text-[#101828] text-[32px] font-bold mt-2 tracking-tight">
-              {item.value}
-            </p>
+            {isLoading ? (
+              <div className="h-9 w-24 bg-gray-100 animate-pulse rounded-md mt-2" />
+            ) : (
+              <p className="font-general-sans text-[#101828] text-[32px] font-bold mt-2 tracking-tight">
+                {item.value}
+              </p>
+            )}
           </div>
         ))}
       </div>
@@ -54,9 +67,13 @@ export const UsersMetricsCard: React.FC = () => {
               <span className="text-[13px] font-normal text-[#667085]">
                 {item.label}
               </span>
-              <p className="font-general-sans text-[#101828] text-[32px] font-bold mt-2 tracking-tight">
-                {item.value}
-              </p>
+              {isLoading ? (
+                <div className="h-9 w-24 bg-gray-100 animate-pulse rounded-md mt-2" />
+              ) : (
+                <p className="font-general-sans text-[#101828] text-[32px] font-bold mt-2 tracking-tight">
+                  {item.value}
+                </p>
+              )}
             </div>
           ))}
         </div>

@@ -1,6 +1,8 @@
 "use client";
 
 import React from "react";
+import { useAmbassadorsSummary } from "@/hooks/use-ambassadors";
+import { formatMetricNumber } from "@/hooks/use-overview";
 
 interface AmbassadorsMetricsCardProps {
   isEmpty?: boolean;
@@ -9,16 +11,54 @@ interface AmbassadorsMetricsCardProps {
 export const AmbassadorsMetricsCard: React.FC<AmbassadorsMetricsCardProps> = ({
   isEmpty = false,
 }) => {
+  const { data: summary, isLoading } = useAmbassadorsSummary();
+
+  const totalAmbassadors = isEmpty
+    ? "00"
+    : summary
+    ? formatMetricNumber(summary.totalAmbassadors ?? 0)
+    : "0";
+
+  const activeAmbassadors = isEmpty
+    ? "00"
+    : summary
+    ? formatMetricNumber(summary.activeAmbassadors ?? 0)
+    : "0";
+
+  const usersIntroduced = isEmpty
+    ? "00"
+    : summary
+    ? formatMetricNumber(summary.usersIntroduced ?? 0)
+    : "0";
+
+  const referralsGenerated = isEmpty
+    ? "00"
+    : summary
+    ? formatMetricNumber(summary.referralsGenerated ?? 0)
+    : "0";
+
+  const redeemedReferrals = isEmpty
+    ? "00"
+    : summary
+    ? formatMetricNumber(summary.redeemedReferrals ?? 0)
+    : "0";
+
+  const convertedUsers = isEmpty
+    ? "00"
+    : summary
+    ? formatMetricNumber(summary.convertedUsers ?? 0)
+    : "0";
+
   const row1 = [
-    { label: "Total Ambassadors", value: isEmpty ? "00" : "3.2k" },
-    { label: "Active Ambassadors", value: isEmpty ? "00" : "1.2k" },
-    { label: "Users Introduced", value: isEmpty ? "00" : "200" },
+    { label: "Total Ambassadors", value: totalAmbassadors },
+    { label: "Active Ambassadors", value: activeAmbassadors },
+    { label: "Users Introduced", value: usersIntroduced },
   ];
 
   const row2 = [
-    { label: "Referrals Generated", value: isEmpty ? "00" : "3.2k" },
-    { label: "Redeemed Referrals", value: isEmpty ? "00" : "1.2k" },
-    { label: "Converted Users", value: isEmpty ? "00" : "200" },
+    { label: "Referrals Generated", value: referralsGenerated },
+    { label: "Redeemed Referrals", value: redeemedReferrals },
+    { label: "Converted Users", value: convertedUsers },
   ];
 
   return (
@@ -35,7 +75,11 @@ export const AmbassadorsMetricsCard: React.FC<AmbassadorsMetricsCardProps> = ({
             <span className="text-[13px] font-normal text-[#667085]">
               {item.label}
             </span>
-            <p className="font-general-sans text-[#101828] text-[32px] font-bold mt-2 tracking-tight">
+            <p
+              className={`font-general-sans text-[#101828] text-[32px] font-bold mt-2 tracking-tight ${
+                isLoading ? "opacity-60 animate-pulse" : ""
+              }`}
+            >
               {item.value}
             </p>
           </div>
@@ -55,7 +99,11 @@ export const AmbassadorsMetricsCard: React.FC<AmbassadorsMetricsCardProps> = ({
               <span className="text-[13px] font-normal text-[#667085]">
                 {item.label}
               </span>
-              <p className="font-general-sans text-[#101828] text-[32px] font-bold mt-2 tracking-tight">
+              <p
+                className={`font-general-sans text-[#101828] text-[32px] font-bold mt-2 tracking-tight ${
+                  isLoading ? "opacity-60 animate-pulse" : ""
+                }`}
+              >
                 {item.value}
               </p>
             </div>

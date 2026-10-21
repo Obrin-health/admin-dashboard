@@ -3,10 +3,7 @@
 import React, { useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import AmbassadorsMetricsCard from "@/components/ambassadors/ambassadors-metrics-card";
-import AmbassadorsTable, {
-  AmbassadorRow,
-  initialMockAmbassadors,
-} from "@/components/ambassadors/ambassadors-table";
+import AmbassadorsTable from "@/components/ambassadors/ambassadors-table";
 import AmbassadorsEmptyState from "@/components/ambassadors/ambassadors-empty-state";
 import OnboardAmbassadorModal from "@/components/ambassadors/onboard-ambassador-modal";
 
@@ -18,35 +15,8 @@ function AmbassadorsPageContent() {
     emptyParam ? "empty" : "data"
   );
   const [isOnboardModalOpen, setIsOnboardModalOpen] = useState(false);
-  const [ambassadorsList, setAmbassadorsList] = useState<AmbassadorRow[]>(
-    initialMockAmbassadors
-  );
 
-  const handleOnboardSuccess = (newAmb: {
-    name: string;
-    contactNumber: string;
-    campaign: string;
-    type: "Physical" | "Digital";
-  }) => {
-    const created: AmbassadorRow = {
-      id: String(Date.now()),
-      name: newAmb.name,
-      avatarText:
-        newAmb.name
-          .trim()
-          .split(/\s+/)
-          .filter(Boolean)
-          .map((p) => p[0])
-          .slice(0, 2)
-          .join("")
-          .toUpperCase() || "JD",
-      contactNumber: newAmb.contactNumber,
-      activeCampaign: newAmb.campaign,
-      type: newAmb.type,
-      totalUsersIntroduced: 0,
-      status: "Active",
-    };
-    setAmbassadorsList((prev) => [created, ...prev]);
+  const handleOnboardSuccess = () => {
     setViewState("data");
   };
 
@@ -77,7 +47,7 @@ function AmbassadorsPageContent() {
 
       {/* Main Content: Table View vs Empty State */}
       {viewState === "data" ? (
-        <AmbassadorsTable ambassadors={ambassadorsList} />
+        <AmbassadorsTable />
       ) : (
         <AmbassadorsEmptyState dashboardHref="/" />
       )}

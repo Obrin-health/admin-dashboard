@@ -20,7 +20,7 @@ export const SuspendAmbassadorModal: React.FC<SuspendAmbassadorModalProps> = ({
   isOpen,
   onClose,
   onConfirm,
-  ambassadorName = "Emmanuel Adebayo",
+  ambassadorName = "this ambassador",
 }) => {
   const handleConfirm = () => {
     if (onConfirm) onConfirm();

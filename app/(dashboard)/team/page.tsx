@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, Suspense } from "react";
 import TeamMetricsCard from "@/components/team/team-metrics-card";
 import TeamTable from "@/components/team/team-table";
 import AddTeamMemberModal from "@/components/team/add-team-member-modal";
@@ -52,7 +52,7 @@ const initialTeamMembers: TeamMember[] = [
   },
 ];
 
-export default function TeamPage() {
+function TeamPageContent() {
   const [members, setMembers] = useState<TeamMember[]>(initialTeamMembers);
 
   // Modal States
@@ -208,5 +208,13 @@ export default function TeamPage() {
         onSave={handleSaveEdit}
       />
     </div>
+  );
+}
+
+export default function TeamPage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-[#667085] text-sm">Loading team...</div>}>
+      <TeamPageContent />
+    </Suspense>
   );
 }

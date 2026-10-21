@@ -11,6 +11,7 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { RemoveAmbassadorModal } from "@/components/campaigns/remove-ambassador-modal";
+import { useTablePagination } from "@/hooks/use-table-pagination";
 
 interface CampaignAmbassadorRow {
   id: string;
@@ -87,7 +88,7 @@ export const CampaignAmbassadorsTab: React.FC = () => {
   const [selectedAction, setSelectedAction] = useState("All actions");
   const [selectedRole, setSelectedRole] = useState("All roles");
   const [selectedDate, setSelectedDate] = useState("May 2023 – May 2024");
-  const [currentPage, setCurrentPage] = useState(1);
+  const { currentPage, setCurrentPage } = useTablePagination({ paramName: "ambPage" });
   const [selectedAmbassadorToRemove, setSelectedAmbassadorToRemove] =
     useState<CampaignAmbassadorRow | null>(null);
 

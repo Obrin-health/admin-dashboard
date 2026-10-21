@@ -15,6 +15,7 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
+import { useTablePagination } from "@/hooks/use-table-pagination";
 
 export interface ReferralRow {
   id: string;
@@ -105,7 +106,7 @@ export const ReferralsTable: React.FC = () => {
   const [selectedStatus, setSelectedStatus] = useState("All status");
   const [selectedPhone, setSelectedPhone] = useState("All Phone number");
   const [selectedDate, setSelectedDate] = useState("May 2023 – May 2024");
-  const [currentPage, setCurrentPage] = useState(1);
+  const { currentPage, setCurrentPage } = useTablePagination();
 
   const filteredReferrals = mockReferralsList.filter((item) => {
     const matchesSearch =

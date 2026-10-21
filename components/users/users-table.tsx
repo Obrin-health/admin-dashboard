@@ -1,13 +1,15 @@
 "use client";
 
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   Search,
   ChevronDown,
   SlidersHorizontal,
   MoreVertical,
   Check,
+  Loader2,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -16,105 +18,93 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
+import { useUsersList } from "@/hooks/use-users";
+import { useTablePagination } from "@/hooks/use-table-pagination";
+import type { AdminUserItem, UserSource, UserStatus } from "@/types/users";
 
-export interface UserRow {
-  id: string;
-  name: string;
-  phone: string;
-  source: "WhatsApp" | "Ambassador";
-  campaign: string;
-  referralsGenerated: number;
-  redeemed: number;
-  lastActiveDate: string;
-}
-
-export const initialMockUsers: UserRow[] = [
-  {
-    id: "1",
-    name: "Emmanuel Adebayo",
-    phone: "+234 8175927055",
-    source: "WhatsApp",
-    campaign: "Unilag Outreach",
-    referralsGenerated: 245,
-    redeemed: 245,
-    lastActiveDate: "Sept, 10, 2023: 10:00AM",
-  },
-  {
-    id: "2",
-    name: "Emmanuel Adebayo",
-    phone: "+234 8175927055",
-    source: "Ambassador",
-    campaign: "-",
-    referralsGenerated: 120,
-    redeemed: 120,
-    lastActiveDate: "Sept, 10, 2023: 10:00AM",
-  },
-  {
-    id: "3",
-    name: "Emmanuel Adebayo",
-    phone: "+234 8175927055",
-    source: "Ambassador",
-    campaign: "Unilag Outreach",
-    referralsGenerated: 100,
-    redeemed: 100,
-    lastActiveDate: "Sept, 10, 2023: 10:00AM",
-  },
-  {
-    id: "4",
-    name: "Emmanuel Adebayo",
-    phone: "+234 8175927055",
-    source: "WhatsApp",
-    campaign: "-",
-    referralsGenerated: 120,
-    redeemed: 120,
-    lastActiveDate: "Sept, 10, 2023: 10:00AM",
-  },
-  {
-    id: "5",
-    name: "Emmanuel Adebayo",
-    phone: "+234 8175927055",
-    source: "Ambassador",
-    campaign: "Unilag Outreach",
-    referralsGenerated: 120,
-    redeemed: 120,
-    lastActiveDate: "Sept, 10, 2023: 10:00AM",
-  },
-  {
-    id: "6",
-    name: "Emmanuel Adebayo",
-    phone: "+234 8175927055",
-    source: "WhatsApp",
-    campaign: "Ambassador",
-    referralsGenerated: 120,
-    redeemed: 120,
-    lastActiveDate: "Sept, 10, 2023: 10:00AM",
-  },
-  {
-    id: "7",
-    name: "Emmanuel Adebayo",
-    phone: "+234 8175927055",
-    source: "WhatsApp",
-    campaign: "WhatsApp",
-    referralsGenerated: 120,
-    redeemed: 120,
-    lastActiveDate: "Sept, 10, 2023: 10:00AM",
-  },
-];
+export type { AdminUserItem as UserRow };
 
 interface ColumnConfig {
-  id: keyof UserRow | "actions";
+  id: string;
   label: string;
   visible: boolean;
 }
 
-export const UsersTable: React.FC<{ users?: UserRow[] }> = ({
-  users = initialMockUsers,
-}) => {
-  const [searchQuery, setSearchQuery] = useState("");
-  const [selectedCampaign, setSelectedCampaign] = useState("All campaigns");
-  const [selectedSource, setSelectedSource] = useState("All source");
-  const [selectedDate, setSelectedDate] = useState("May 2023 - May 2024");
-  const [currentPage, setCurrentPage] = useState(1);
+function formatDate(dateStr: string | null): string {
+  if (!dateStr) return "-";
+  try {
+    const d = new Date(dateStr);
+    return d.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+      hour: "numeric",
+      minute: "numeric",
+      hour12: true,
+    });
+  } catch {
+    return dateStr;
+  }
+}
+
+export const UsersTable: React.FC = () => {
+  const router = useRouter();
+  const [searchInput, setSearchInput] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [selectedSource, setSelectedSource] = useState<string>("All source");
+  const [selectedStatus, setSelectedStatus] = useState<string>("All status");
+  const { currentPage, setCurrentPage } = useTablePagination();
+  const pageSize = 10;
+
+  // Debounce search input by 350ms, only resetting page when searchInput changes
+  const prevSearchRef = useRef(searchInput);
+  useEffect(() => {
+    if (prevSearchRef.current === searchInput) {
+      return;
+    }
+    prevSearchRef.current = searchInput;
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchInput.trim());
+      setCurrentPage(1);
+    }, 350);
+    return () => clearTimeout(timer);
+  }, [searchInput, setCurrentPage]);
+
+  // Map filters to API params
+  const apiSource: UserSource | undefined =
+    selectedSource === "WhatsApp"
+      ? "WHATSAPP"
+      : selectedSource === "Ambassador"
+      ? "AMBASSADOR"
+      : selectedSource === "Campaign"
+      ? "CAMPAIGN"
+      : undefined;
+
+  const apiStatus: UserStatus | undefined =
+    selectedStatus === "Active"
+      ? "ACTIVE"
+      : selectedStatus === "Suspended"
+      ? "SUSPENDED"
+      : undefined;
+
+  // Fetch live paginated users from API
+  const { data, isLoading, isFetching } = useUsersList({
+    page: currentPage,
+    pageSize,
+    search: debouncedSearch || undefined,
+    source: apiSource,
+    status: apiStatus,
+  });
+
+  const users = data?.data || [];
+  const meta = data?.meta || {
+    page: 1,
+    pageSize: 10,
+    total: 0,
+    totalPages: 1,
+  };
+
+  const totalPages = Math.max(1, meta.totalPages);
 
   // Column visibility state
   const [columns, setColumns] = useState<ColumnConfig[]>([
@@ -137,40 +127,7 @@ export const UsersTable: React.FC<{ users?: UserRow[] }> = ({
   const isVisible = (id: string) =>
     columns.find((c) => c.id === id)?.visible ?? true;
 
-  // Filter users
-  const filteredUsers = useMemo(() => {
-    return users.filter((u) => {
-      const matchesSearch =
-        u.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        u.phone.includes(searchQuery) ||
-        u.campaign.toLowerCase().includes(searchQuery.toLowerCase());
-
-      const matchesCampaign =
-        selectedCampaign === "All campaigns" ||
-        u.campaign.toLowerCase() === selectedCampaign.toLowerCase();
-
-      const matchesSource =
-        selectedSource === "All source" ||
-        u.source.toLowerCase() === selectedSource.toLowerCase();
-
-      const matchesDate = (() => {
-        if (selectedDate === "All time") return true;
-        if (selectedDate === "May 2023 - May 2024") {
-          return u.lastActiveDate.includes("2023") || u.lastActiveDate.includes("2024");
-        }
-        if (selectedDate === "Past 30 days" || selectedDate === "Past 90 days") {
-          return u.lastActiveDate.toLowerCase().includes("sept");
-        }
-        return true;
-      })();
-
-      return matchesSearch && matchesCampaign && matchesSource && matchesDate;
-    });
-  }, [users, searchQuery, selectedCampaign, selectedSource, selectedDate]);
-
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchQuery, selectedCampaign, selectedSource, selectedDate]);
+  const visibleColumnCount = columns.filter((c) => c.visible).length;
 
   return (
     <div className="space-y-4">
@@ -182,7 +139,7 @@ export const UsersTable: React.FC<{ users?: UserRow[] }> = ({
             <span>Table view column</span>
             <ChevronDown className="size-3.5 text-[#667085]" />
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" className="w-56 p-1.5">
+          <DropdownMenuContent align="start" className="w-56 p-1.5 z-50">
             <div className="px-2 py-1 text-[11px] font-semibold text-[#8A9BA8] uppercase tracking-wider">
               Toggle Columns
             </div>
@@ -201,6 +158,13 @@ export const UsersTable: React.FC<{ users?: UserRow[] }> = ({
             ))}
           </DropdownMenuContent>
         </DropdownMenu>
+
+        {isFetching && !isLoading && (
+          <div className="flex items-center gap-1.5 text-[12px] text-[#BB1A8C]">
+            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+            <span>Updating...</span>
+          </div>
+        )}
       </div>
 
       {/* Filter and Search Bar */}
@@ -210,54 +174,35 @@ export const UsersTable: React.FC<{ users?: UserRow[] }> = ({
           <Search className="size-4 text-[#8A9BA8] shrink-0" />
           <input
             type="text"
-            placeholder="Search"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search by name, phone, ref"
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
             className="w-full bg-transparent text-[13px] text-[#101828] placeholder-[#98A2B3] outline-none"
           />
         </div>
 
         {/* Filter Dropdowns */}
         <div className="flex flex-wrap items-center gap-2.5">
-          {/* Campaign Filter */}
-          <DropdownMenu>
-            <DropdownMenuTrigger className="inline-flex items-center gap-1.5 px-3.5 py-2 text-[12px] md:text-[13px] font-normal text-[#344054] bg-white border border-[#D0D5DD] rounded-xl hover:bg-gray-50 transition-colors shadow-2xs cursor-pointer">
-              <span>Show:</span>
-              <strong className="font-semibold text-[#101828]">
-                {selectedCampaign}
-              </strong>
-              <ChevronDown className="size-3.5 text-[#667085]" />
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              {["All campaigns", "Unilag Outreach", "Ambassador", "WhatsApp"].map(
-                (c) => (
-                  <DropdownMenuItem
-                    key={c}
-                    onClick={() => setSelectedCampaign(c)}
-                    className="text-[13px] cursor-pointer"
-                  >
-                    {c}
-                  </DropdownMenuItem>
-                )
-              )}
-            </DropdownMenuContent>
-          </DropdownMenu>
-
           {/* Source Filter */}
           <DropdownMenu>
             <DropdownMenuTrigger className="inline-flex items-center gap-1.5 px-3.5 py-2 text-[12px] md:text-[13px] font-normal text-[#344054] bg-white border border-[#D0D5DD] rounded-xl hover:bg-gray-50 transition-colors shadow-2xs cursor-pointer">
-              <span>Show:</span>
+              <span>Source:</span>
               <strong className="font-semibold text-[#101828]">
                 {selectedSource}
               </strong>
               <ChevronDown className="size-3.5 text-[#667085]" />
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              {["All source", "WhatsApp", "Ambassador"].map((s) => (
+            <DropdownMenuContent align="end" className="z-50">
+              {["All source", "WhatsApp", "Ambassador", "Campaign"].map((s) => (
                 <DropdownMenuItem
                   key={s}
-                  onClick={() => setSelectedSource(s)}
-                  className="text-[13px] cursor-pointer"
+                  onClick={() => {
+                    setSelectedSource(s);
+                    setCurrentPage(1);
+                  }}
+                  className={`text-[13px] cursor-pointer ${
+                    selectedSource === s ? "font-semibold text-[#BB1A8C]" : ""
+                  }`}
                 >
                   {s}
                 </DropdownMenuItem>
@@ -265,28 +210,28 @@ export const UsersTable: React.FC<{ users?: UserRow[] }> = ({
             </DropdownMenuContent>
           </DropdownMenu>
 
-          {/* Date Filter */}
+          {/* Status Filter */}
           <DropdownMenu>
             <DropdownMenuTrigger className="inline-flex items-center gap-1.5 px-3.5 py-2 text-[12px] md:text-[13px] font-normal text-[#344054] bg-white border border-[#D0D5DD] rounded-xl hover:bg-gray-50 transition-colors shadow-2xs cursor-pointer">
-              <span>Date:</span>
+              <span>Status:</span>
               <strong className="font-semibold text-[#101828]">
-                {selectedDate}
+                {selectedStatus}
               </strong>
               <ChevronDown className="size-3.5 text-[#667085]" />
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              {[
-                "May 2023 - May 2024",
-                "Past 30 days",
-                "Past 90 days",
-                "All time",
-              ].map((d) => (
+            <DropdownMenuContent align="end" className="z-50">
+              {["All status", "Active", "Suspended"].map((st) => (
                 <DropdownMenuItem
-                  key={d}
-                  onClick={() => setSelectedDate(d)}
-                  className="text-[13px] cursor-pointer"
+                  key={st}
+                  onClick={() => {
+                    setSelectedStatus(st);
+                    setCurrentPage(1);
+                  }}
+                  className={`text-[13px] cursor-pointer ${
+                    selectedStatus === st ? "font-semibold text-[#BB1A8C]" : ""
+                  }`}
                 >
-                  {d}
+                  {st}
                 </DropdownMenuItem>
               ))}
             </DropdownMenuContent>
@@ -313,10 +258,7 @@ export const UsersTable: React.FC<{ users?: UserRow[] }> = ({
                   <th className="py-3.5 px-6 font-normal">Campaign</th>
                 )}
                 {isVisible("referralsGenerated") && (
-                  <th className="py-3.5 px-6 font-normal">
-                    Referrals
-                    <br className="sm:hidden" /> Generated
-                  </th>
+                  <th className="py-3.5 px-6 font-normal">Referrals Generated</th>
                 )}
                 {isVisible("redeemed") && (
                   <th className="py-3.5 px-6 font-normal">Redeemed</th>
@@ -330,126 +272,174 @@ export const UsersTable: React.FC<{ users?: UserRow[] }> = ({
               </tr>
             </thead>
             <tbody className="divide-y divide-[#F2F4F7] text-[13px]">
-              {filteredUsers.length === 0 ? (
+              {isLoading ? (
+                Array.from({ length: 10 }).map((_, i) => (
+                  <tr key={i} className="animate-pulse">
+                    <td colSpan={visibleColumnCount} className="py-4 px-6">
+                      <div className="h-4 bg-gray-100 rounded-md w-full" />
+                    </td>
+                  </tr>
+                ))
+              ) : users.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={columns.filter((c) => c.visible).length}
+                    colSpan={visibleColumnCount}
                     className="py-12 text-center text-[#667085]"
                   >
-                    No users match your filters.
+                    No users found matching your filters.
                   </td>
                 </tr>
               ) : (
-                filteredUsers.map((user) => (
-                  <tr
-                    key={user.id}
-                    className="hover:bg-[#FAFAFC] transition-colors"
-                  >
-                    {/* User Name */}
-                    {isVisible("name") && (
-                      <td className="py-4 px-6 font-medium text-[#101828] whitespace-nowrap">
-                        {user.name}
-                      </td>
-                    )}
+                users.map((user) => {
+                  const upperSource = (user.source || "").toUpperCase();
 
-                    {/* Phone/Whatsapp */}
-                    {isVisible("phone") && (
-                      <td className="py-4 px-6 text-[#344054] whitespace-nowrap">
-                        {user.phone}
-                      </td>
-                    )}
+                  return (
+                    <tr
+                      key={user.id}
+                      className="hover:bg-[#FAFAFC] transition-colors"
+                    >
+                      {/* User Name & Reference */}
+                      {isVisible("name") && (
+                        <td className="py-4 px-6 whitespace-nowrap">
+                          <div className="flex flex-col">
+                            <span className="font-medium text-[#101828]">
+                              {user.name || "Unnamed User"}
+                            </span>
+                            <span className="text-[11px] text-[#8A9BA8]">
+                              {user.reference}
+                            </span>
+                          </div>
+                        </td>
+                      )}
 
-                    {/* Source Badge */}
-                    {isVisible("source") && (
-                      <td className="py-4 px-6 whitespace-nowrap">
-                        {user.source === "WhatsApp" ? (
-                          <span className="inline-flex items-center px-3 py-0.5 rounded-full text-[12px] font-medium bg-[#E7F8F0] text-[#0D894F]">
-                            WhatsApp
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center px-3 py-0.5 rounded-full text-[12px] font-medium bg-[#FDF2FA] text-[#C11574]">
-                            Ambassador
-                          </span>
-                        )}
-                      </td>
-                    )}
+                      {/* Phone/Whatsapp */}
+                      {isVisible("phone") && (
+                        <td className="py-4 px-6 text-[#344054] whitespace-nowrap font-mono text-[12px]">
+                          {user.whatsappId}
+                        </td>
+                      )}
 
-                    {/* Campaign */}
-                    {isVisible("campaign") && (
-                      <td className="py-4 px-6 text-[#344054] whitespace-nowrap">
-                        {user.campaign}
-                      </td>
-                    )}
+                      {/* Source Badge */}
+                      {isVisible("source") && (
+                        <td className="py-4 px-6 whitespace-nowrap">
+                          {upperSource === "WHATSAPP" ? (
+                            <span className="inline-flex items-center px-3 py-0.5 rounded-full text-[12px] font-medium bg-[#E7F8F0] text-[#0D894F]">
+                              WhatsApp
+                            </span>
+                          ) : upperSource === "AMBASSADOR" ? (
+                            <span className="inline-flex items-center px-3 py-0.5 rounded-full text-[12px] font-medium bg-[#FDF2FA] text-[#C11574]">
+                              Ambassador
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center px-3 py-0.5 rounded-full text-[12px] font-medium bg-[#F0F9FF] text-[#026AA2]">
+                              Campaign
+                            </span>
+                          )}
+                        </td>
+                      )}
 
-                    {/* Referrals Generated */}
-                    {isVisible("referralsGenerated") && (
-                      <td className="py-4 px-6 text-[#101828] font-medium whitespace-nowrap">
-                        {user.referralsGenerated}
-                      </td>
-                    )}
+                      {/* Campaign */}
+                      {isVisible("campaign") && (
+                        <td className="py-4 px-6 text-[#344054] whitespace-nowrap">
+                          {user.campaign?.name || "-"}
+                        </td>
+                      )}
 
-                    {/* Redeemed */}
-                    {isVisible("redeemed") && (
-                      <td className="py-4 px-6 text-[#101828] font-medium whitespace-nowrap">
-                        {user.redeemed}
-                      </td>
-                    )}
+                      {/* Referrals Generated */}
+                      {isVisible("referralsGenerated") && (
+                        <td className="py-4 px-6 text-[#101828] font-medium whitespace-nowrap">
+                          {user.referralsGenerated}
+                        </td>
+                      )}
 
-                    {/* Last Active Date */}
-                    {isVisible("lastActiveDate") && (
-                      <td className="py-4 px-6 text-[#475467] whitespace-nowrap text-[12px]">
-                        {user.lastActiveDate}
-                      </td>
-                    )}
+                      {/* Redeemed */}
+                      {isVisible("redeemed") && (
+                        <td className="py-4 px-6 text-[#101828] font-medium whitespace-nowrap">
+                          {user.referralsRedeemed}
+                        </td>
+                      )}
 
-                    {/* Actions */}
-                    {isVisible("actions") && (
-                      <td className="py-4 px-6 whitespace-nowrap text-right">
-                        <div className="inline-flex items-center justify-end gap-3">
-                          <Link
-                            href={`/users/${user.id}`}
-                            className="text-[12px] font-semibold text-[#BB1A8C] hover:text-[#9B1373] hover:underline transition-colors"
-                          >
-                            View
-                          </Link>
+                      {/* Last Active Date */}
+                      {isVisible("lastActiveDate") && (
+                        <td className="py-4 px-6 text-[#475467] whitespace-nowrap text-[12px]">
+                          {formatDate(user.lastActiveAt || user.joinedAt)}
+                        </td>
+                      )}
 
-                          <DropdownMenu>
-                            <DropdownMenuTrigger className="p-1 rounded-md hover:bg-gray-100 text-[#667085] transition-colors cursor-pointer outline-none">
-                              <MoreVertical className="size-4" />
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="w-40">
-                              <DropdownMenuItem className="text-[13px] cursor-pointer">
-                                View Profile
-                              </DropdownMenuItem>
-                              <DropdownMenuItem className="text-[13px] cursor-pointer">
-                                View Referrals
-                              </DropdownMenuItem>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem className="text-[13px] text-red-600 cursor-pointer">
-                                Suspend User
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </div>
-                      </td>
-                    )}
-                  </tr>
-                ))
+                      {/* Actions */}
+                      {isVisible("actions") && (
+                        <td className="py-4 px-6 whitespace-nowrap text-right">
+                          <div className="inline-flex items-center justify-end gap-3">
+                            <Link
+                              href={`/users/${user.id}`}
+                              className="text-[12px] font-semibold text-[#BB1A8C] hover:text-[#9B1373] hover:underline transition-colors"
+                            >
+                              View
+                            </Link>
+
+                            <DropdownMenu>
+                              <DropdownMenuTrigger className="p-1 rounded-md hover:bg-gray-100 text-[#667085] transition-colors cursor-pointer outline-none">
+                                <MoreVertical className="size-4" />
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end" className="w-40 z-50">
+                                <DropdownMenuItem
+                                  onClick={() => router.push(`/users/${user.id}`)}
+                                  className="text-[13px] cursor-pointer"
+                                >
+                                  View Profile
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={() => router.push(`/users/${user.id}?tab=referrals`)}
+                                  className="text-[13px] cursor-pointer"
+                                >
+                                  View Referrals
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem
+                                  className={`text-[13px] cursor-pointer ${
+                                    user.status === "ACTIVE"
+                                      ? "text-red-600 hover:text-red-700"
+                                      : "text-emerald-600 hover:text-emerald-700"
+                                  }`}
+                                >
+                                  {user.status === "ACTIVE"
+                                    ? "Suspend User"
+                                    : "Activate User"}
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </div>
+                        </td>
+                      )}
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>
         </div>
 
         {/* Table Footer with Pagination */}
-        <div className="py-3.5 px-6 border-t border-[#EAECF0] flex items-center justify-between">
-          <span className="text-[13px] text-[#667085]">
-            Page {currentPage} of 10
+        <div className="py-3.5 px-6 border-t border-[#EAECF0] flex flex-col sm:flex-row items-center justify-between gap-3">
+          <span suppressHydrationWarning className="text-[13px] text-[#667085]">
+            Showing{" "}
+            <strong>
+              {users.length > 0 ? (currentPage - 1) * pageSize + 1 : 0}
+            </strong>{" "}
+            to{" "}
+            <strong>
+              {Math.min(currentPage * pageSize, meta.total)}
+            </strong>{" "}
+            of <strong>{meta.total.toLocaleString()}</strong> users
           </span>
 
           <div className="flex items-center gap-2">
+            <span suppressHydrationWarning className="text-[12px] text-[#8A9BA8] mr-2">
+              Page {currentPage} of {totalPages}
+            </span>
             <button
               type="button"
-              disabled={currentPage === 1}
+              disabled={currentPage <= 1 || isLoading}
               onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
               className="px-3.5 py-1.5 rounded-lg border border-[#D0D5DD] bg-white text-[13px] font-medium text-[#344054] hover:bg-gray-50 transition-colors shadow-2xs disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
             >
@@ -457,8 +447,8 @@ export const UsersTable: React.FC<{ users?: UserRow[] }> = ({
             </button>
             <button
               type="button"
-              disabled={currentPage === 10}
-              onClick={() => setCurrentPage((p) => Math.min(10, p + 1))}
+              disabled={currentPage >= totalPages || isLoading}
+              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
               className="px-3.5 py-1.5 rounded-lg border border-[#D0D5DD] bg-white text-[13px] font-medium text-[#344054] hover:bg-gray-50 transition-colors shadow-2xs disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
             >
               Next

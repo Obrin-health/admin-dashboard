@@ -45,3 +45,46 @@ export interface CampaignTypesSummary {
   physical: CampaignTypeStat;
   digital: CampaignTypeStat;
 }
+
+export interface MonthAcquisition {
+  month: string;
+  users: number;
+}
+
+export interface UserAcquisitionData {
+  year: number;
+  total: number;
+  months: MonthAcquisition[];
+}
+
+export interface ActiveUserLocation {
+  location: string;
+  users: number;
+  share: number;
+}
+
+export interface ActiveUserPoint {
+  latitude: number;
+  longitude: number;
+  users: number;
+}
+
+export interface ActiveUsersData {
+  activeUsers: number;
+  topLocations: ActiveUserLocation[];
+  points: ActiveUserPoint[];
+}
+
+export interface AgeDistributionBand {
+  label: string;
+  users: number;
+  share: number;
+}
+
+export interface AgeDistributionData {
+  knownAges: number;
+  unknownAges: number;
+  under18: number;
+  bands: AgeDistributionBand[];
+}
+

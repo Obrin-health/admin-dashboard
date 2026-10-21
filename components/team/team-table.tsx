@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { Search, ChevronDown, MoreVertical } from "lucide-react";
 import { TeamMember } from "./edit-team-member-modal";
 import {
@@ -9,6 +9,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
+import { useTablePagination } from "@/hooks/use-table-pagination";
 
 interface TeamTableProps {
   members: TeamMember[];
@@ -26,14 +27,23 @@ export default function TeamTable({
   const [searchQuery, setSearchQuery] = useState("");
   const [roleFilter, setRoleFilter] = useState("All Role");
   const [statusFilter, setStatusFilter] = useState("Status");
-  const [currentPage, setCurrentPage] = useState(1);
+  const { currentPage, setCurrentPage } = useTablePagination();
 
   const roles = ["All Role", "Super Admin", "Admin", "Support"];
   const statuses = ["Status", "Active", "Inactive", "Disabled"];
 
+  const prevFiltersRef = useRef({ searchQuery, roleFilter, statusFilter });
   React.useEffect(() => {
-    setCurrentPage(1);
-  }, [searchQuery, roleFilter, statusFilter]);
+    const prev = prevFiltersRef.current;
+    if (
+      prev.searchQuery !== searchQuery ||
+      prev.roleFilter !== roleFilter ||
+      prev.statusFilter !== statusFilter
+    ) {
+      prevFiltersRef.current = { searchQuery, roleFilter, statusFilter };
+      setCurrentPage(1);
+    }
+  }, [searchQuery, roleFilter, statusFilter, setCurrentPage]);
 
   // Filter members
   const filteredMembers = members.filter((m) => {

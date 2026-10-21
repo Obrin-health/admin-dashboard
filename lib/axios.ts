@@ -1,5 +1,5 @@
-import axios, { AxiosError } from "axios";
-import { getAuthCookie, removeAuthCookie } from "./auth-cookie";
+import axios, { AxiosError, type InternalAxiosRequestConfig } from "axios";
+import { getAuthCookie, refreshAuthToken, removeAuthCookie } from "./auth-cookie";
 import type { ApiErrorResponse } from "@/types/auth";
 
 export const API_BASE_URL =
@@ -17,6 +17,28 @@ export const setAccessTokenInMemory = (token: string | null) => {
 
 export const getAccessTokenInMemory = (): string | null => {
   return inMemoryToken;
+};
+
+/**
+ * Queue for concurrent requests while a token refresh is in flight.
+ */
+interface RetryQueueItem {
+  resolve: (token: string) => void;
+  reject: (error: unknown) => void;
+}
+
+let isRefreshing = false;
+let failedQueue: RetryQueueItem[] = [];
+
+const processQueue = (error: unknown, token: string | null = null) => {
+  failedQueue.forEach((item) => {
+    if (error) {
+      item.reject(error);
+    } else if (token) {
+      item.resolve(token);
+    }
+  });
+  failedQueue = [];
 };
 
 /**
@@ -54,31 +76,90 @@ apiClient.interceptors.request.use(async (config) => {
   return config;
 });
 
-// Response interceptor: handle 401 unauthorized & error formatting
+// Response interceptor: seamlessly refresh token on 401 and retry requests
 apiClient.interceptors.response.use(
   (response) => response,
   async (error: AxiosError<ApiErrorResponse>) => {
-    if (typeof window !== "undefined") {
-      const isAuthEndpoint =
-        error.config?.url?.includes("/login") ||
-        error.config?.url?.includes("/auth/login");
+    const originalRequest = error.config as
+      | (InternalAxiosRequestConfig & { _retry?: boolean })
+      | undefined;
 
-      // For protected routes, 401 indicates expired or missing session
-      if (error.response?.status === 401 && !isAuthEndpoint) {
-        inMemoryToken = null;
-        try {
-          await removeAuthCookie();
-        } catch {
-          // ignore error if network or server action fails
+    if (!originalRequest) {
+      return Promise.reject(error);
+    }
+
+    const url = originalRequest.url || "";
+    const isAuthEndpoint =
+      url.includes("/login") ||
+      url.includes("/auth/login") ||
+      url.includes("/auth/refresh") ||
+      url.includes("/reset-password");
+
+    // For protected routes, 401 indicates expired access token
+    if (
+      error.response?.status === 401 &&
+      !originalRequest._retry &&
+      !isAuthEndpoint
+    ) {
+      if (isRefreshing) {
+        // If a refresh is already in-flight, enqueue this request until resolved
+        return new Promise<string>((resolve, reject) => {
+          failedQueue.push({ resolve, reject });
+        })
+          .then((newToken) => {
+            if (originalRequest.headers) {
+              originalRequest.headers.Authorization = `Bearer ${newToken}`;
+            }
+            return apiClient(originalRequest);
+          })
+          .catch((err) => {
+            return Promise.reject(err);
+          });
+      }
+
+      originalRequest._retry = true;
+      isRefreshing = true;
+
+      try {
+        const refreshResult = await refreshAuthToken();
+
+        if (refreshResult.success && refreshResult.accessToken) {
+          const newToken = refreshResult.accessToken;
+          setAccessTokenInMemory(newToken);
+
+          // Drain and retry all queued requests
+          processQueue(null, newToken);
+
+          if (originalRequest.headers) {
+            originalRequest.headers.Authorization = `Bearer ${newToken}`;
+          }
+
+          return apiClient(originalRequest);
+        } else {
+          throw new Error("Session expired, token refresh failed");
+        }
+      } catch (refreshErr) {
+        processQueue(refreshErr, null);
+        setAccessTokenInMemory(null);
+
+        if (typeof window !== "undefined") {
+          try {
+            await removeAuthCookie();
+          } catch {
+            // ignore cleanup failure
+          }
+
+          if (
+            !window.location.pathname.startsWith("/login") &&
+            !window.location.pathname.startsWith("/reset-password")
+          ) {
+            window.location.replace("/login");
+          }
         }
 
-        if (
-          !window.location.pathname.startsWith("/login") &&
-          !window.location.pathname.startsWith("/reset-password")
-        ) {
-          // eslint-disable-next-line @next/next/no-location-assign-relative-destination
-          window.location.replace("/login");
-        }
+        return Promise.reject(error);
+      } finally {
+        isRefreshing = false;
       }
     }
 

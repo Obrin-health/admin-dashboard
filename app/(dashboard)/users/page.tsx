@@ -1,12 +1,12 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, Suspense } from "react";
 import Link from "next/link";
 import UsersMetricsCard from "@/components/users/users-metrics-card";
 import UsersTable from "@/components/users/users-table";
 import UsersEmptyState from "@/components/users/users-empty-state";
 
-export default function UsersPage() {
+function UsersPageContent() {
   const [viewState, setViewState] = useState<"data" | "empty">("data");
 
   return (
@@ -40,5 +40,13 @@ export default function UsersPage() {
         <UsersEmptyState dashboardHref="/" onActionClick={() => setViewState("data")} />
       )}
     </div>
+  );
+}
+
+export default function UsersPage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-[#667085] text-sm">Loading users...</div>}>
+      <UsersPageContent />
+    </Suspense>
   );
 }

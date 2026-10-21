@@ -2,180 +2,147 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { ChevronDown, MoreVertical } from "lucide-react";
+import { ChevronDown, Loader2 } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
+import { useUserReferrals } from "@/hooks/use-users";
+import { useTablePagination } from "@/hooks/use-table-pagination";
 
-interface ReferralItem {
-  id: string;
-  code: string;
-  provider: string;
-  avatar: string;
-  location: string;
-  generationDate: string;
-  redemptionDate: string;
-  status: "Active" | "Suspended";
+interface UserRecentReferralsProps {
+  userId: string;
 }
 
-const mockReferrals: ReferralItem[] = [
-  {
-    id: "1",
-    code: "OBR-2040",
-    provider: "XYZ Clinic",
-    avatar: "JD",
-    location: "Ikeja",
-    generationDate: "Sept, 10, 2023",
-    redemptionDate: "Sept, 10, 2023",
-    status: "Suspended",
-  },
-  {
-    id: "2",
-    code: "OBR-2040",
-    provider: "Alpha Health",
-    avatar: "JD",
-    location: "Yaba",
-    generationDate: "Sept, 10, 2023",
-    redemptionDate: "Sept, 10, 2023",
-    status: "Active",
-  },
-  {
-    id: "3",
-    code: "OBR-2040",
-    provider: "BY Pharmacy",
-    avatar: "JD",
-    location: "Ikeja",
-    generationDate: "Sept, 10, 2023",
-    redemptionDate: "Sept, 10, 2023",
-    status: "Active",
-  },
-  {
-    id: "4",
-    code: "OBR-2040",
-    provider: "XYZ Clinic",
-    avatar: "JD",
-    location: "Ikeja",
-    generationDate: "Sept, 10, 2023",
-    redemptionDate: "Sept, 10, 2023",
-    status: "Active",
-  },
-  {
-    id: "5",
-    code: "OBR-2040",
-    provider: "BY Pharmacy",
-    avatar: "JD",
-    location: "Ikeja",
-    generationDate: "Sept, 10, 2023",
-    redemptionDate: "Sept, 10, 2023",
-    status: "Active",
-  },
-  {
-    id: "6",
-    code: "OBR-2040",
-    provider: "XYZ Clinic",
-    avatar: "JD",
-    location: "Ikeja",
-    generationDate: "Sept, 10, 2023",
-    redemptionDate: "Sept, 10, 2023",
-    status: "Active",
-  },
-  {
-    id: "7",
-    code: "OBR-2040",
-    provider: "BY Pharmacy",
-    avatar: "JD",
-    location: "Ikeja",
-    generationDate: "Sept, 10, 2023",
-    redemptionDate: "Sept, 10, 2023",
-    status: "Active",
-  },
-];
+function formatDate(dateStr: string | null | undefined): string {
+  if (!dateStr) return "—";
+  try {
+    const d = new Date(dateStr);
+    return d.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    });
+  } catch {
+    return dateStr;
+  }
+}
 
-export const UserRecentReferrals: React.FC = () => {
-  const [selectedAction, setSelectedAction] = useState("All actions");
-  const [selectedRole, setSelectedRole] = useState("All roles");
-  const [selectedDate, setSelectedDate] = useState("May 2023 - May 2024");
-  const [currentPage, setCurrentPage] = useState(1);
+export const UserRecentReferrals: React.FC<UserRecentReferralsProps> = ({
+  userId,
+}) => {
+  const [selectedStatus, setSelectedStatus] = useState<string>("All status");
+  const { currentPage, setCurrentPage } = useTablePagination({ paramName: "refPage" });
+  const pageSize = 10;
+
+  const apiStatus = selectedStatus === "All status" ? undefined : selectedStatus;
+
+  const { data, isLoading, isFetching } = useUserReferrals(userId, {
+    page: currentPage,
+    pageSize,
+    status: apiStatus,
+  });
+
+  const referrals = data?.data || [];
+  const meta = data?.meta || {
+    page: 1,
+    pageSize: 10,
+    total: 0,
+    totalPages: 1,
+  };
+  const totalPages = Math.max(1, meta.totalPages);
+
+  const getStatusBadge = (status: string) => {
+    switch (status.toUpperCase()) {
+      case "ACTIVE":
+        return (
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-[#ECFDF3] text-[#027A48]">
+            Active
+          </span>
+        );
+      case "CONVERTED":
+        return (
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-[#F4EBFF] text-[#6941C6]">
+            Converted
+          </span>
+        );
+      case "REDEEMED":
+        return (
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-[#EFF8FF] text-[#175CD3]">
+            Redeemed
+          </span>
+        );
+      case "EXPIRED":
+        return (
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-[#FEF3F2] text-[#B42318]">
+            Expired
+          </span>
+        );
+      case "CANCELLED":
+      case "REJECTED":
+        return (
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-[#F2F4F7] text-[#344054]">
+            {status}
+          </span>
+        );
+      default:
+        return (
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-[#F2F4F7] text-[#344054]">
+            {status}
+          </span>
+        );
+    }
+  };
 
   return (
     <div className="w-full space-y-4 pt-4">
       {/* Header and Filter Row */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-        <h3 className="text-[18px] font-bold text-[#101828]">
-          Recent Referrals
-        </h3>
+        <div className="flex items-center gap-3">
+          <h3 className="text-[18px] font-bold text-[#101828]">
+            Recent Referrals
+          </h3>
+          {isFetching && !isLoading && (
+            <div className="flex items-center gap-1.5 text-[12px] text-[#BB1A8C]">
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              <span>Updating...</span>
+            </div>
+          )}
+        </div>
 
         <div className="flex flex-wrap items-center gap-2.5">
-          {/* Actions Filter */}
+          {/* Status Filter */}
           <DropdownMenu>
             <DropdownMenuTrigger className="inline-flex items-center gap-1.5 px-3.5 py-2 text-[12px] md:text-[13px] font-normal text-[#344054] bg-white border border-[#D0D5DD] rounded-xl hover:bg-gray-50 transition-colors shadow-2xs cursor-pointer">
-              <span>Show:</span>
+              <span>Status:</span>
               <strong className="font-semibold text-[#101828]">
-                {selectedAction}
+                {selectedStatus}
               </strong>
               <ChevronDown className="size-3.5 text-[#667085]" />
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              {["All actions", "Redeemed", "Generated", "Pending"].map((a) => (
-                <DropdownMenuItem
-                  key={a}
-                  onClick={() => setSelectedAction(a)}
-                  className="text-[13px] cursor-pointer"
-                >
-                  {a}
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
-
-          {/* Roles Filter */}
-          <DropdownMenu>
-            <DropdownMenuTrigger className="inline-flex items-center gap-1.5 px-3.5 py-2 text-[12px] md:text-[13px] font-normal text-[#344054] bg-white border border-[#D0D5DD] rounded-xl hover:bg-gray-50 transition-colors shadow-2xs cursor-pointer">
-              <span>Show:</span>
-              <strong className="font-semibold text-[#101828]">
-                {selectedRole}
-              </strong>
-              <ChevronDown className="size-3.5 text-[#667085]" />
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              {["All roles", "Admin", "User", "Ambassador"].map((r) => (
-                <DropdownMenuItem
-                  key={r}
-                  onClick={() => setSelectedRole(r)}
-                  className="text-[13px] cursor-pointer"
-                >
-                  {r}
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
-
-          {/* Date Filter */}
-          <DropdownMenu>
-            <DropdownMenuTrigger className="inline-flex items-center gap-1.5 px-3.5 py-2 text-[12px] md:text-[13px] font-normal text-[#344054] bg-white border border-[#D0D5DD] rounded-xl hover:bg-gray-50 transition-colors shadow-2xs cursor-pointer">
-              <span>Date:</span>
-              <strong className="font-semibold text-[#101828]">
-                {selectedDate}
-              </strong>
-              <ChevronDown className="size-3.5 text-[#667085]" />
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
+            <DropdownMenuContent align="end" className="z-50">
               {[
-                "May 2023 - May 2024",
-                "Past 30 days",
-                "Past 90 days",
-                "All time",
-              ].map((d) => (
+                "All status",
+                "ACTIVE",
+                "REDEEMED",
+                "CONVERTED",
+                "EXPIRED",
+                "CANCELLED",
+                "REJECTED",
+              ].map((s) => (
                 <DropdownMenuItem
-                  key={d}
-                  onClick={() => setSelectedDate(d)}
-                  className="text-[13px] cursor-pointer"
+                  key={s}
+                  onClick={() => {
+                    setSelectedStatus(s);
+                    setCurrentPage(1);
+                  }}
+                  className={`text-[13px] cursor-pointer ${
+                    selectedStatus === s ? "font-semibold text-[#BB1A8C]" : ""
+                  }`}
                 >
-                  {d}
+                  {s}
                 </DropdownMenuItem>
               ))}
             </DropdownMenuContent>
@@ -199,98 +166,105 @@ export const UserRecentReferrals: React.FC = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-[#F2F4F7] text-[13px]">
-              {mockReferrals.map((item) => (
-                <tr
-                  key={item.id}
-                  className="hover:bg-[#FAFAFC] transition-colors"
-                >
-                  {/* Referral Code */}
-                  <td className="py-4 px-6 text-[#344054] font-medium whitespace-nowrap">
-                    {item.code}
+              {isLoading ? (
+                Array.from({ length: 6 }).map((_, i) => (
+                  <tr key={i} className="animate-pulse">
+                    <td colSpan={7} className="py-4 px-6">
+                      <div className="h-4 bg-gray-100 rounded-md w-full" />
+                    </td>
+                  </tr>
+                ))
+              ) : referrals.length === 0 ? (
+                <tr>
+                  <td
+                    colSpan={7}
+                    className="py-12 text-center text-[#667085]"
+                  >
+                    No referrals found for this user.
                   </td>
+                </tr>
+              ) : (
+                referrals.map((item) => (
+                  <tr
+                    key={item.id}
+                    className="hover:bg-[#FAFAFC] transition-colors"
+                  >
+                    {/* Referral Code */}
+                    <td className="py-4 px-6 text-[#101828] font-semibold whitespace-nowrap">
+                      {item.code}
+                    </td>
 
-                  {/* Provider */}
-                  <td className="py-4 px-6 whitespace-nowrap">
-                    <div className="flex items-center gap-3">
-                      <div className="size-8 rounded-full bg-[#BB1A8C] text-white flex items-center justify-center font-semibold text-xs shrink-0">
-                        {item.avatar}
+                    {/* Provider */}
+                    <td className="py-4 px-6 whitespace-nowrap">
+                      <div className="flex items-center gap-3">
+                        <div className="size-8 rounded-full bg-[#E0F2FE] text-[#0284C7] flex items-center justify-center font-bold text-xs shrink-0">
+                          {item.provider?.name
+                            ? item.provider.name.charAt(0).toUpperCase()
+                            : "P"}
+                        </div>
+                        <span className="font-medium text-[#101828]">
+                          {item.provider?.name || "Unknown Provider"}
+                        </span>
                       </div>
-                      <span className="font-medium text-[#101828]">
-                        {item.provider}
-                      </span>
-                    </div>
-                  </td>
+                    </td>
 
-                  {/* Location */}
-                  <td className="py-4 px-6 text-[#101828] font-medium whitespace-nowrap">
-                    {item.location}
-                  </td>
+                    {/* Location */}
+                    <td className="py-4 px-6 text-[#475467] font-medium whitespace-nowrap">
+                      {item.location || "—"}
+                    </td>
 
-                  {/* Generation Date */}
-                  <td className="py-4 px-6 text-[#475467] whitespace-nowrap">
-                    {item.generationDate}
-                  </td>
+                    {/* Generation Date */}
+                    <td className="py-4 px-6 text-[#475467] whitespace-nowrap">
+                      {formatDate(item.generatedAt)}
+                    </td>
 
-                  {/* Redemption Date */}
-                  <td className="py-4 px-6 text-[#475467] whitespace-nowrap">
-                    {item.redemptionDate}
-                  </td>
+                    {/* Redemption Date */}
+                    <td className="py-4 px-6 text-[#475467] whitespace-nowrap">
+                      {item.redeemedAt ? formatDate(item.redeemedAt) : "—"}
+                    </td>
 
-                  {/* Status Badge */}
-                  <td className="py-4 px-6 whitespace-nowrap">
-                    {item.status === "Active" ? (
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[12px] font-medium bg-[#ECFDF3] text-[#027A48]">
-                        Active
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[12px] font-medium bg-[#FEF3F2] text-[#D92D20]">
-                        Suspended
-                      </span>
-                    )}
-                  </td>
+                    {/* Status Badge */}
+                    <td className="py-4 px-6 whitespace-nowrap">
+                      {getStatusBadge(item.status)}
+                    </td>
 
-                  {/* Actions */}
-                  <td className="py-4 px-6 whitespace-nowrap text-right">
-                    <div className="inline-flex items-center justify-end gap-3">
+                    {/* Actions */}
+                    <td className="py-4 px-6 whitespace-nowrap text-right">
                       <Link
                         href={`/referrals/${item.id}`}
-                        className="text-[12px] font-semibold text-[#BB1A8C] hover:text-[#9B1373] hover:underline transition-colors"
+                        className="text-[13px] font-semibold text-[#BB1A8C] hover:text-[#9B1373] hover:underline transition-colors"
                       >
                         View
                       </Link>
-
-                      <DropdownMenu>
-                        <DropdownMenuTrigger className="p-1 rounded-md hover:bg-gray-100 text-[#667085] transition-colors cursor-pointer outline-none">
-                          <MoreVertical className="size-4" />
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-36">
-                          <DropdownMenuItem className="text-[13px] cursor-pointer">
-                            View Details
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem className="text-[13px] text-red-600 cursor-pointer">
-                            Suspend Code
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
-                  </td>
-                </tr>
-              ))}
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
 
         {/* Table Footer with Pagination */}
-        <div className="py-3.5 px-6 border-t border-[#EAECF0] flex items-center justify-between">
+        <div className="py-3.5 px-6 border-t border-[#EAECF0] flex flex-col sm:flex-row items-center justify-between gap-3">
           <span className="text-[13px] text-[#667085]">
-            Page {currentPage} of 10
+            Showing{" "}
+            <strong>
+              {referrals.length > 0 ? (currentPage - 1) * pageSize + 1 : 0}
+            </strong>{" "}
+            to{" "}
+            <strong>
+              {Math.min(currentPage * pageSize, meta.total)}
+            </strong>{" "}
+            of <strong>{meta.total.toLocaleString()}</strong> referrals
           </span>
 
           <div className="flex items-center gap-2">
+            <span className="text-[12px] text-[#8A9BA8] mr-2">
+              Page {currentPage} of {totalPages}
+            </span>
             <button
               type="button"
-              disabled={currentPage === 1}
+              disabled={currentPage <= 1 || isLoading}
               onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
               className="px-3.5 py-1.5 rounded-lg border border-[#D0D5DD] bg-white text-[13px] font-medium text-[#344054] hover:bg-gray-50 transition-colors shadow-2xs disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
             >
@@ -298,8 +272,8 @@ export const UserRecentReferrals: React.FC = () => {
             </button>
             <button
               type="button"
-              disabled={currentPage === 10}
-              onClick={() => setCurrentPage((p) => Math.min(10, p + 1))}
+              disabled={currentPage >= totalPages || isLoading}
+              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
               className="px-3.5 py-1.5 rounded-lg border border-[#D0D5DD] bg-white text-[13px] font-medium text-[#344054] hover:bg-gray-50 transition-colors shadow-2xs disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
             >
               Next

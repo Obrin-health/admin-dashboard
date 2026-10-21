@@ -1,10 +1,72 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import Image from "next/image";
-import { MapPin, Building2 } from "lucide-react";
+import { Building2, MapPin, Plus, Minus, ExternalLink } from "lucide-react";
+import { Map, Overlay } from "pigeon-maps";
+import type { UserDetail } from "@/types/users";
 
-export const UserQuickStatsMap: React.FC = () => {
+interface UserQuickStatsMapProps {
+  user?: UserDetail;
+  isLoading?: boolean;
+}
+
+const CITY_COORDINATES: Record<string, [number, number]> = {
+  ikeja: [6.6018, 3.3515],
+  lagos: [6.5244, 3.3792],
+  ibadan: [7.3775, 3.947],
+  oyo: [7.843, 3.9368],
+  abuja: [9.0765, 7.3986],
+  fct: [9.0765, 7.3986],
+  kano: [12.0022, 8.592],
+  rivers: [4.8156, 7.0498],
+  "port harcourt": [4.8156, 7.0498],
+};
+
+const mapTileProvider = (x: number, y: number, z: number, dpr?: number) => {
+  const apiKey =
+    process.env.NEXT_PUBLIC_CARTO_API_KEY ||
+    process.env.NEXT_PUBLIC_MAP_API_KEY;
+
+  if (apiKey) {
+    const s = ["a", "b", "c", "d"][Math.abs(x + y) % 4];
+    return `https://${s}.basemaps.cartocdn.com/rastertiles/voyager/${z}/${x}/${y}${
+      dpr && dpr >= 2 ? "@2x" : ""
+    }.png?api_key=${apiKey}`;
+  }
+
+  const s = ["a", "b", "c"][Math.abs(x + y) % 3];
+  return `https://${s}.tile.openstreetmap.org/${z}/${x}/${y}.png`;
+};
+
+export const UserQuickStatsMap: React.FC<UserQuickStatsMapProps> = ({
+  user,
+  isLoading,
+}) => {
+  const [mounted, setMounted] = useState(false);
+  const [zoom, setZoom] = useState(10);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const lat = user?.location?.latitude;
+  const lng = user?.location?.longitude;
+  const city = user?.location?.city?.toLowerCase() || "";
+
+  let center: [number, number] = [6.5244, 3.3792]; // Lagos default
+  if (lat && lng && !isNaN(lat) && !isNaN(lng)) {
+    center = [lat, lng];
+  } else if (city && CITY_COORDINATES[city]) {
+    center = CITY_COORDINATES[city];
+  }
+
+  const locationDisplay = user?.location?.city
+    ? `${user.location.city}${user.location.state ? `, ${user.location.state}` : ""}`
+    : user?.location?.state || "Lagos, Nigeria";
+
+  const googleMapsUrl = `https://www.google.com/maps?q=${center[0]},${center[1]}`;
+
   return (
     <div className="w-full rounded-2xl border border-[#EAECF0] bg-white p-5 sm:p-6 shadow-xs flex flex-col gap-5">
       {/* Quick Statistics Header */}
@@ -34,9 +96,13 @@ export const UserQuickStatsMap: React.FC = () => {
             <span className="text-[11px] text-[#667085] block leading-tight">
               Clinic Searches
             </span>
-            <span className="font-general-sans text-[17px] font-bold text-[#101828] block mt-0.5">
-              245
-            </span>
+            {isLoading ? (
+              <div className="h-5 w-12 bg-gray-200 rounded animate-pulse mt-1" />
+            ) : (
+              <span className="font-general-sans text-[17px] font-bold text-[#101828] block mt-0.5">
+                {(user?.stats?.clinicSearches ?? 0).toLocaleString()}
+              </span>
+            )}
           </div>
         </div>
 
@@ -55,9 +121,13 @@ export const UserQuickStatsMap: React.FC = () => {
             <span className="text-[11px] text-[#667085] block leading-tight">
               Total Referrals Generated
             </span>
-            <span className="font-general-sans text-[17px] font-bold text-[#101828] block mt-0.5">
-              245
-            </span>
+            {isLoading ? (
+              <div className="h-5 w-12 bg-gray-200 rounded animate-pulse mt-1" />
+            ) : (
+              <span className="font-general-sans text-[17px] font-bold text-[#101828] block mt-0.5">
+                {(user?.stats?.generatedCodes ?? 0).toLocaleString()}
+              </span>
+            )}
           </div>
         </div>
 
@@ -76,9 +146,13 @@ export const UserQuickStatsMap: React.FC = () => {
             <span className="text-[11px] text-[#667085] block leading-tight">
               Total Redeemed
             </span>
-            <span className="font-general-sans text-[17px] font-bold text-[#101828] block mt-0.5">
-              245
-            </span>
+            {isLoading ? (
+              <div className="h-5 w-12 bg-gray-200 rounded animate-pulse mt-1" />
+            ) : (
+              <span className="font-general-sans text-[17px] font-bold text-[#101828] block mt-0.5">
+                {(user?.stats?.redeemedCodes ?? 0).toLocaleString()}
+              </span>
+            )}
           </div>
         </div>
 
@@ -97,59 +171,79 @@ export const UserQuickStatsMap: React.FC = () => {
             <span className="text-[11px] text-[#667085] block leading-tight">
               Conversion Rate
             </span>
-            <span className="font-general-sans text-[17px] font-bold text-[#101828] block mt-0.5">
-              245
-            </span>
+            {isLoading ? (
+              <div className="h-5 w-12 bg-gray-200 rounded animate-pulse mt-1" />
+            ) : (
+              <span className="font-general-sans text-[17px] font-bold text-[#101828] block mt-0.5">
+                {Math.round((user?.stats?.conversionRate ?? 0) * 100)}%
+              </span>
+            )}
           </div>
         </div>
       </div>
 
-      {/* Map Preview Card */}
+      {/* Real Interactive Map Card with Pigeon Maps */}
       <div className="rounded-xl border border-[#EAECF0] overflow-hidden bg-white shadow-2xs">
-        {/* Stylized SVG Map Illustration */}
-        <div className="h-32 w-full bg-[#E8EEF5] relative overflow-hidden flex items-center justify-center">
-          <svg
-            className="absolute inset-0 w-full h-full opacity-60"
-            viewBox="0 0 400 160"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            {/* Background Roads */}
-            <path d="M-20 40 Q 150 70 420 20" stroke="#FFFFFF" strokeWidth="8" />
-            <path d="M-20 120 Q 200 90 420 140" stroke="#FFFFFF" strokeWidth="6" />
-            <path d="M100 -20 Q 140 80 180 180" stroke="#FFFFFF" strokeWidth="7" />
-            <path d="M260 -20 Q 280 90 320 180" stroke="#FFE28C" strokeWidth="5" />
-            <path d="M20 160 L 380 -20" stroke="#FFE28C" strokeWidth="6" />
-            <text
-              x="80"
-              y="45"
-              fill="#7E8B9B"
-              fontSize="12"
-              fontWeight="bold"
-              letterSpacing="1"
+        <div className="h-44 w-full bg-[#E8EEF5] relative overflow-hidden">
+          {mounted ? (
+            <Map
+              center={center}
+              zoom={zoom}
+              provider={mapTileProvider}
+              animate={true}
+              height={176}
             >
-              AGEGE
-            </text>
-          </svg>
+              <Overlay anchor={center} offset={[16, 32]}>
+                <div className="relative group flex flex-col items-center cursor-pointer">
+                  <div className="px-2 py-0.5 rounded-md bg-[#101828] text-white text-[10px] font-semibold whitespace-nowrap shadow-md mb-1">
+                    {user?.location?.city || "User Location"}
+                  </div>
+                  <MapPin className="w-7 h-7 text-[#BB1A8C] fill-[#BB1A8C] drop-shadow-md" />
+                </div>
+              </Overlay>
+            </Map>
+          ) : (
+            <div className="h-full w-full flex items-center justify-center text-[12px] text-[#667085]">
+              Loading map...
+            </div>
+          )}
 
-          {/* Pin & Label */}
-          <div className="relative z-10 flex items-center gap-2">
-            <MapPin className="w-6 h-6 text-red-600 fill-red-600 drop-shadow-md" />
-            <span className="text-xl font-bold text-[#101828] drop-shadow-xs">
-              Ikeja
-            </span>
+          {/* Zoom controls overlay */}
+          <div className="absolute bottom-2.5 right-2.5 z-10 flex flex-col gap-1 bg-white/95 backdrop-blur-xs rounded-lg border border-[#EAECF0] p-0.5 shadow-xs">
+            <button
+              type="button"
+              onClick={() => setZoom((z) => Math.min(18, z + 1))}
+              className="p-1 hover:bg-gray-100 rounded text-[#344054] transition-colors cursor-pointer"
+              title="Zoom in"
+            >
+              <Plus className="w-3.5 h-3.5" />
+            </button>
+            <button
+              type="button"
+              onClick={() => setZoom((z) => Math.max(3, z - 1))}
+              className="p-1 hover:bg-gray-100 rounded text-[#344054] transition-colors cursor-pointer"
+              title="Zoom out"
+            >
+              <Minus className="w-3.5 h-3.5" />
+            </button>
           </div>
         </div>
 
         {/* Map Card Footer */}
         <div className="p-3 px-4 flex items-center justify-between bg-white text-xs border-t border-[#EAECF0]">
-          <span className="text-[#344054] font-medium">Ikeja, Lagos</span>
-          <button
-            type="button"
-            className="text-[#BB1A8C] font-semibold hover:underline cursor-pointer"
+          <span className="text-[#344054] font-medium flex items-center gap-1.5">
+            <MapPin className="size-3.5 text-[#BB1A8C]" />
+            {locationDisplay}
+          </span>
+          <a
+            href={googleMapsUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-[#BB1A8C] font-semibold hover:underline inline-flex items-center gap-1 cursor-pointer"
           >
-            View on Map
-          </button>
+            <span>View on Map</span>
+            <ExternalLink className="size-3" />
+          </a>
         </div>
       </div>
     </div>

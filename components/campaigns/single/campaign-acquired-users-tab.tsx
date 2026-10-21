@@ -10,6 +10,7 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
+import { useTablePagination } from "@/hooks/use-table-pagination";
 
 interface AcquiredUserRow {
   id: string;
@@ -83,7 +84,7 @@ export const CampaignAcquiredUsersTab: React.FC = () => {
   const [selectedAction, setSelectedAction] = useState("All actions");
   const [selectedRole, setSelectedRole] = useState("All roles");
   const [selectedDate, setSelectedDate] = useState("May 2023 – May 2024");
-  const [currentPage, setCurrentPage] = useState(1);
+  const { currentPage, setCurrentPage } = useTablePagination({ paramName: "acqPage" });
 
   return (
     <div className="space-y-4">

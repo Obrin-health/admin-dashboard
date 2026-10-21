@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Search, ChevronDown, MoreVertical } from "lucide-react";
@@ -12,6 +12,7 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { DeleteCampaignModal } from "@/components/campaigns/delete-campaign-modal";
+import { useTablePagination } from "@/hooks/use-table-pagination";
 
 export interface CampaignListRow {
   id: string;
@@ -88,7 +89,7 @@ export const CampaignsTable: React.FC<{
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedStatus, setSelectedStatus] = useState("All status");
   const [selectedType, setSelectedType] = useState("All types");
-  const [currentPage, setCurrentPage] = useState(1);
+  const { currentPage, setCurrentPage } = useTablePagination();
   const [campaignToDelete, setCampaignToDelete] =
     useState<CampaignListRow | null>(null);
 
@@ -96,9 +97,18 @@ export const CampaignsTable: React.FC<{
     setCampaignsList(initialCampaigns);
   }, [initialCampaigns]);
 
+  const prevFiltersRef = useRef({ searchQuery, selectedStatus, selectedType });
   React.useEffect(() => {
-    setCurrentPage(1);
-  }, [searchQuery, selectedStatus, selectedType]);
+    const prev = prevFiltersRef.current;
+    if (
+      prev.searchQuery !== searchQuery ||
+      prev.selectedStatus !== selectedStatus ||
+      prev.selectedType !== selectedType
+    ) {
+      prevFiltersRef.current = { searchQuery, selectedStatus, selectedType };
+      setCurrentPage(1);
+    }
+  }, [searchQuery, selectedStatus, selectedType, setCurrentPage]);
 
   const filteredCampaigns = campaignsList.filter((camp) => {
     const matchesSearch = camp.name

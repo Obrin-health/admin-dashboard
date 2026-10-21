@@ -1,7 +1,9 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import Image from "next/image";
 import {
   Search,
   ChevronDown,
@@ -9,6 +11,10 @@ import {
   Check,
   Calendar,
   SlidersHorizontal,
+  Loader2,
+  AlertTriangle,
+  UserCheck,
+  UserX,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -17,6 +23,18 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
+import { useTablePagination } from "@/hooks/use-table-pagination";
+import {
+  useAmbassadorsList,
+  useSuspendAmbassador,
+  useActivateAmbassador,
+  useDeactivateAmbassador,
+} from "@/hooks/use-ambassadors";
+import { SuspendAmbassadorModal } from "@/components/ambassadors/single/suspend-ambassador-modal";
+import type {
+  AmbassadorListItem,
+  AmbassadorStatus,
+} from "@/types/ambassadors";
 
 export interface AmbassadorRow {
   id: string;
@@ -27,80 +45,9 @@ export interface AmbassadorRow {
   type: "Physical" | "Digital";
   totalUsersIntroduced: number;
   status: "Active" | "Inactive" | "Suspended";
+  photoUrl?: string | null;
 }
 
-export const initialMockAmbassadors: AmbassadorRow[] = [
-  {
-    id: "1",
-    name: "Emmanuel Adebayo",
-    avatarText: "JD",
-    contactNumber: "+234 8175927055",
-    activeCampaign: "Unilag Outreach",
-    type: "Physical",
-    totalUsersIntroduced: 245,
-    status: "Inactive",
-  },
-  {
-    id: "2",
-    name: "Emmanuel Adebayo",
-    avatarText: "JD",
-    contactNumber: "+234 8175927055",
-    activeCampaign: "Unilag Outreach",
-    type: "Digital",
-    totalUsersIntroduced: 120,
-    status: "Active",
-  },
-  {
-    id: "3",
-    name: "Emmanuel Adebayo",
-    avatarText: "JD",
-    contactNumber: "+234 8175927055",
-    activeCampaign: "Unilag Outreach",
-    type: "Digital",
-    totalUsersIntroduced: 100,
-    status: "Inactive",
-  },
-  {
-    id: "4",
-    name: "Emmanuel Adebayo",
-    avatarText: "JD",
-    contactNumber: "+234 8175927055",
-    activeCampaign: "Ambassador",
-    type: "Physical",
-    totalUsersIntroduced: 120,
-    status: "Suspended",
-  },
-  {
-    id: "5",
-    name: "Emmanuel Adebayo",
-    avatarText: "JD",
-    contactNumber: "+234 8175927055",
-    activeCampaign: "Unilag Outreach",
-    type: "Digital",
-    totalUsersIntroduced: 120,
-    status: "Active",
-  },
-  {
-    id: "6",
-    name: "Emmanuel Adebayo",
-    avatarText: "JD",
-    contactNumber: "+234 8175927055",
-    activeCampaign: "Ambassador",
-    type: "Physical",
-    totalUsersIntroduced: 120,
-    status: "Active",
-  },
-  {
-    id: "7",
-    name: "Emmanuel Adebayo",
-    avatarText: "JD",
-    contactNumber: "+234 8175927055",
-    activeCampaign: "WhatsApp",
-    type: "Physical",
-    totalUsersIntroduced: 120,
-    status: "Active",
-  },
-];
 
 interface ColumnConfig {
   id: keyof AmbassadorRow | "actions";
@@ -108,15 +55,166 @@ interface ColumnConfig {
   visible: boolean;
 }
 
+function getInitials(name: string): string {
+  if (!name) return "AM";
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[1][0]).toUpperCase();
+}
+
+function mapApiToRow(item: AmbassadorListItem): AmbassadorRow {
+  let displayName = "Ambassador";
+  if (typeof item.fullName === "string" && item.fullName.trim()) {
+    displayName = item.fullName.trim();
+  } else if (typeof item.name === "string" && item.name.trim()) {
+    displayName = item.name.trim();
+  }
+
+  const rawStatus = (typeof item.status === "string" ? item.status : "ACTIVE").toUpperCase();
+  const status: "Active" | "Inactive" | "Suspended" =
+    rawStatus === "ACTIVE"
+      ? "Active"
+      : rawStatus === "SUSPENDED"
+      ? "Suspended"
+      : "Inactive";
+
+  const rawType = (typeof item.type === "string" ? item.type : "PHYSICAL").toUpperCase();
+  const type: "Physical" | "Digital" =
+    rawType === "DIGITAL" ? "Digital" : "Physical";
+
+  let campaignName = "-";
+  if (typeof item.activeCampaign === "string" && item.activeCampaign.trim()) {
+    campaignName = item.activeCampaign.trim();
+  } else if (typeof item.activeCampaign === "object" && item.activeCampaign !== null) {
+    const c = item.activeCampaign as Record<string, unknown>;
+    campaignName =
+      (typeof c.name === "string" && c.name.trim()) ||
+      (typeof c.title === "string" && c.title.trim()) ||
+      "-";
+  }
+
+  const contactNumber =
+    typeof item.phoneNumber === "string"
+      ? item.phoneNumber
+      : typeof item.contactNumber === "string"
+      ? item.contactNumber
+      : "-";
+
+  return {
+    id: typeof item.id === "string" ? item.id : String(item.id || ""),
+    name: displayName,
+    avatarText: getInitials(displayName),
+    contactNumber,
+    activeCampaign: campaignName,
+    type,
+    totalUsersIntroduced: typeof item.totalUsersIntroduced === "number" ? item.totalUsersIntroduced : 0,
+    status,
+    photoUrl: typeof item.photoUrl === "string" ? item.photoUrl : (typeof item.avatarUrl === "string" ? item.avatarUrl : null),
+  };
+}
+
 export const AmbassadorsTable: React.FC<{
   ambassadors?: AmbassadorRow[];
-}> = ({ ambassadors = initialMockAmbassadors }) => {
+}> = ({ ambassadors: propAmbassadors }) => {
+  const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [selectedStatus, setSelectedStatus] = useState("All status");
   const [selectedCampaign, setSelectedCampaign] = useState("All campaigns");
   const [selectedSource, setSelectedSource] = useState("All source");
   const [selectedDate, setSelectedDate] = useState("May 2023 – May 2024");
-  const [currentPage, setCurrentPage] = useState(1);
+  const { currentPage, setCurrentPage } = useTablePagination();
+
+  // Suspend modal state
+  const [suspendTarget, setSuspendTarget] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
+
+  // Status mutations
+  const suspendMutation = useSuspendAmbassador();
+  const activateMutation = useActivateAmbassador();
+  const deactivateMutation = useDeactivateAmbassador();
+
+  // Search debounce
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchQuery.trim());
+      setCurrentPage(1);
+    }, 350);
+    return () => clearTimeout(timer);
+  }, [searchQuery, setCurrentPage]);
+
+  // Map status to API filter
+  const apiStatus: AmbassadorStatus | undefined =
+    selectedStatus === "Active"
+      ? "ACTIVE"
+      : selectedStatus === "Suspended"
+      ? "SUSPENDED"
+      : selectedStatus === "Inactive"
+      ? "INACTIVE"
+      : undefined;
+
+  const pageSize = 10;
+
+  // React Query fetch
+  const { data: apiResponse, isLoading, isError } = useAmbassadorsList({
+    page: currentPage,
+    pageSize,
+    search: debouncedSearch || undefined,
+    status: apiStatus,
+  });
+
+  // Decide data source
+  // Decide data source
+  const rawApiItems = apiResponse?.items || apiResponse?.data;
+  const hasApiData = Array.isArray(rawApiItems);
+
+  const displayList: AmbassadorRow[] = hasApiData
+    ? rawApiItems.map(mapApiToRow)
+    : propAmbassadors || [];
+
+  // Local filtering (applied for campaign and source filters, as well as status and search)
+  const filteredAmbassadors = displayList.filter((amb) => {
+    const matchesCampaign =
+      selectedCampaign === "All campaigns" ||
+      amb.activeCampaign.toLowerCase() === selectedCampaign.toLowerCase();
+
+    const matchesSource =
+      selectedSource === "All source" ||
+      amb.type.toLowerCase() === selectedSource.toLowerCase();
+
+    const matchesStatus =
+      selectedStatus === "All status" ||
+      amb.status.toLowerCase() === selectedStatus.toLowerCase();
+
+    const matchesSearch =
+      !searchQuery.trim() ||
+      amb.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      amb.contactNumber.includes(searchQuery) ||
+      amb.activeCampaign.toLowerCase().includes(searchQuery.toLowerCase());
+
+    return matchesCampaign && matchesSource && matchesStatus && matchesSearch;
+  });
+
+  const hasLocalFilter =
+    selectedCampaign !== "All campaigns" || selectedSource !== "All source";
+
+  const totalCount = hasLocalFilter
+    ? filteredAmbassadors.length
+    : apiResponse?.meta?.total ??
+      apiResponse?.total ??
+      filteredAmbassadors.length;
+
+  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
+
+  const paginatedAmbassadors =
+    hasApiData && !hasLocalFilter
+      ? filteredAmbassadors
+      : filteredAmbassadors.slice(
+          (currentPage - 1) * pageSize,
+          currentPage * pageSize
+        );
 
   // Column visibility state
   const [columns, setColumns] = useState<ColumnConfig[]>([
@@ -140,39 +238,37 @@ export const AmbassadorsTable: React.FC<{
 
   const campaignOptions = [
     "All campaigns",
-    ...Array.from(new Set(ambassadors.map((a) => a.activeCampaign).filter(Boolean))),
+    ...Array.from(
+      new Set(displayList.map((a) => a.activeCampaign).filter(Boolean))
+    ),
   ];
 
-  React.useEffect(() => {
-    setCurrentPage(1);
-  }, [searchQuery, selectedStatus, selectedCampaign, selectedSource, selectedDate]);
+  const handleSuspendConfirm = async () => {
+    if (!suspendTarget) return;
+    try {
+      await suspendMutation.mutateAsync(suspendTarget.id);
+    } catch {
+      // handled
+    } finally {
+      setSuspendTarget(null);
+    }
+  };
 
-  // Filter ambassadors
-  const filteredAmbassadors = ambassadors.filter((amb) => {
-    const matchesSearch =
-      amb.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      amb.contactNumber.includes(searchQuery) ||
-      amb.activeCampaign.toLowerCase().includes(searchQuery.toLowerCase());
+  const handleActivate = async (id: string) => {
+    try {
+      await activateMutation.mutateAsync(id);
+    } catch {
+      // handled
+    }
+  };
 
-    const matchesStatus =
-      selectedStatus === "All status" || amb.status === selectedStatus;
-
-    const matchesCampaign =
-      selectedCampaign === "All campaigns" ||
-      amb.activeCampaign === selectedCampaign;
-
-    const matchesSource =
-      selectedSource === "All source" || amb.type === selectedSource;
-
-    return matchesSearch && matchesStatus && matchesCampaign && matchesSource;
-  });
-
-  const pageSize = 5;
-  const totalPages = Math.max(1, Math.ceil(filteredAmbassadors.length / pageSize));
-  const paginatedAmbassadors = filteredAmbassadors.slice(
-    (currentPage - 1) * pageSize,
-    currentPage * pageSize
-  );
+  const handleDeactivate = async (id: string) => {
+    try {
+      await deactivateMutation.mutateAsync(id);
+    } catch {
+      // handled
+    }
+  };
 
   return (
     <div className="space-y-4">
@@ -212,7 +308,7 @@ export const AmbassadorsTable: React.FC<{
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 size-4 text-[#667085]" />
             <input
               type="text"
-              placeholder="Search"
+              placeholder="Search by name, phone or campaign"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full pl-10 pr-4 py-2 rounded-lg border border-[#D0D5DD] bg-white text-[13px] text-[#101828] placeholder-[#667085] focus:outline-none focus:border-[#BB1A8C] focus:ring-1 focus:ring-[#BB1A8C] transition-all shadow-2xs"
@@ -232,7 +328,10 @@ export const AmbassadorsTable: React.FC<{
                 {["All status", "Active", "Inactive", "Suspended"].map((status) => (
                   <DropdownMenuItem
                     key={status}
-                    onClick={() => setSelectedStatus(status)}
+                    onClick={() => {
+                      setSelectedStatus(status);
+                      setCurrentPage(1);
+                    }}
                     className="text-[13px] cursor-pointer"
                   >
                     {status}
@@ -245,7 +344,7 @@ export const AmbassadorsTable: React.FC<{
             <DropdownMenu>
               <DropdownMenuTrigger className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-[#D0D5DD] bg-white text-[13px] text-[#344054] hover:bg-gray-50 transition-colors shadow-2xs outline-none cursor-pointer">
                 <span className="text-[#667085]">Show:</span>
-                <span className="font-medium">{selectedCampaign}</span>
+                <span className="font-medium truncate max-w-[120px]">{selectedCampaign}</span>
                 <ChevronDown className="size-3.5 text-[#667085]" />
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48">
@@ -330,9 +429,7 @@ export const AmbassadorsTable: React.FC<{
                   <th className="py-3 px-6 font-normal">Type</th>
                 )}
                 {isVisible("totalUsersIntroduced") && (
-                  <th className="py-3 px-6 font-normal">
-                    Total Users Introduced
-                  </th>
+                  <th className="py-3 px-6 font-normal">Total Users Introduced</th>
                 )}
                 {isVisible("status") && (
                   <th className="py-3 px-6 font-normal">Status</th>
@@ -342,33 +439,54 @@ export const AmbassadorsTable: React.FC<{
                 )}
               </tr>
             </thead>
+
             <tbody className="divide-y divide-[#EAECF0]">
-              {filteredAmbassadors.length === 0 ? (
+              {isLoading ? (
                 <tr>
-                  <td
-                    colSpan={columns.filter((c) => c.visible).length}
-                    className="py-12 text-center text-[#667085]"
-                  >
-                    No ambassadors found matching current filters.
+                  <td colSpan={7} className="py-12 text-center text-[#667085]">
+                    <div className="flex flex-col items-center justify-center gap-2">
+                      <Loader2 className="size-6 animate-spin text-[#BB1A8C]" />
+                      <span className="text-[13px]">Loading ambassadors...</span>
+                    </div>
+                  </td>
+                </tr>
+              ) : paginatedAmbassadors.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="py-12 text-center text-[#667085]">
+                    No ambassadors found matching the filter criteria.
                   </td>
                 </tr>
               ) : (
                 paginatedAmbassadors.map((amb) => (
                   <tr
                     key={amb.id}
-                    className="hover:bg-gray-50/60 transition-colors"
+                    className="hover:bg-[#F9FAFB] transition-colors group"
                   >
-                    {/* Ambassador with JD Initials Badge */}
+                    {/* Ambassador Profile */}
                     {isVisible("name") && (
-                      <td className="py-4 px-6 text-[#101828] font-medium whitespace-nowrap">
-                        <div className="flex items-center gap-3">
-                          <div className="size-8 rounded-full bg-[#BB1A8C] flex items-center justify-center text-white text-[11px] font-bold shrink-0">
-                            {amb.avatarText}
-                          </div>
-                          <span className="text-[13px] font-medium text-[#101828]">
+                      <td className="py-4 px-6 whitespace-nowrap">
+                        <Link
+                          href={`/ambassadors/${amb.id}`}
+                          className="flex items-center gap-3 group/link"
+                        >
+                          {amb.photoUrl ? (
+                            <div className="relative size-10 rounded-full overflow-hidden border border-[#EAECF0] shrink-0">
+                              <Image
+                                src={amb.photoUrl}
+                                alt={amb.name}
+                                fill
+                                className="object-cover"
+                              />
+                            </div>
+                          ) : (
+                            <div className="size-10 rounded-full bg-[#F2F4F7] flex items-center justify-center text-[#475467] font-semibold text-[13px] border border-[#EAECF0] shrink-0">
+                              {amb.avatarText}
+                            </div>
+                          )}
+                          <span className="text-[13px] font-semibold text-[#101828] group-hover/link:text-[#BB1A8C] transition-colors">
                             {amb.name}
                           </span>
-                        </div>
+                        </Link>
                       </td>
                     )}
 
@@ -444,20 +562,61 @@ export const AmbassadorsTable: React.FC<{
                             <DropdownMenuTrigger className="p-1 rounded-md hover:bg-gray-100 text-[#667085] transition-colors cursor-pointer outline-none">
                               <MoreVertical className="size-4" />
                             </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="w-44">
-                              <DropdownMenuItem className="text-[13px] cursor-pointer">
+                            <DropdownMenuContent align="end" className="w-48">
+                              <DropdownMenuItem
+                                onClick={() => router.push(`/ambassadors/${amb.id}`)}
+                                className="text-[13px] cursor-pointer"
+                              >
                                 View Profile
                               </DropdownMenuItem>
-                              <DropdownMenuItem className="text-[13px] cursor-pointer">
-                                View Referrals
+                              <DropdownMenuItem
+                                onClick={() => router.push(`/ambassadors/${amb.id}?tab=users`)}
+                                className="text-[13px] cursor-pointer"
+                              >
+                                View Users Introduced
                               </DropdownMenuItem>
-                              <DropdownMenuItem className="text-[13px] cursor-pointer">
-                                Edit Details
+                              <DropdownMenuItem
+                                onClick={() => router.push(`/ambassadors/${amb.id}?tab=campaigns`)}
+                                className="text-[13px] cursor-pointer"
+                              >
+                                View Campaigns
                               </DropdownMenuItem>
+
                               <DropdownMenuSeparator />
-                              <DropdownMenuItem className="text-[13px] text-red-600 cursor-pointer">
-                                Suspend Ambassador
-                              </DropdownMenuItem>
+
+                              {/* Status action items */}
+                              {amb.status === "Suspended" ? (
+                                <DropdownMenuItem
+                                  onClick={() => handleActivate(amb.id)}
+                                  className="text-[13px] text-green-600 cursor-pointer font-medium"
+                                >
+                                  <UserCheck className="size-4 mr-2" />
+                                  <span>Activate Ambassador</span>
+                                </DropdownMenuItem>
+                              ) : (
+                                <DropdownMenuItem
+                                  onClick={() =>
+                                    setSuspendTarget({
+                                      id: amb.id,
+                                      name: amb.name,
+                                    })
+                                  }
+                                  className="text-[13px] text-amber-600 cursor-pointer font-medium"
+                                >
+                                  <AlertTriangle className="size-4 mr-2" />
+                                  <span>Suspend Ambassador</span>
+                                </DropdownMenuItem>
+                              )}
+
+                              {amb.status !== "Inactive" && (
+                                <DropdownMenuItem
+                                  onClick={() => handleDeactivate(amb.id)}
+                                  className="text-[13px] text-red-600 cursor-pointer font-medium"
+                                >
+                                  <UserX className="size-4 mr-2" />
+                                  <span>Deactivate Ambassador</span>
+                                </DropdownMenuItem>
+                              )}
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </div>
@@ -473,28 +632,52 @@ export const AmbassadorsTable: React.FC<{
         {/* Table Footer with Pagination */}
         <div className="py-3.5 px-6 border-t border-[#EAECF0] flex items-center justify-between">
           <span className="text-[13px] text-[#667085]">
-            Page {currentPage} of {totalPages}
+            Showing{" "}
+            {Math.min(
+              (currentPage - 1) * (hasApiData ? pageSize : 5) + 1,
+              totalCount
+            )}
+            –
+            {Math.min(
+              currentPage * (hasApiData ? pageSize : 5),
+              totalCount
+            )}{" "}
+            of {totalCount} ambassadors
           </span>
+
           <div className="flex items-center gap-2">
             <button
               type="button"
               disabled={currentPage <= 1}
               onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-              className="px-3.5 py-1.5 rounded-lg border border-[#D0D5DD] bg-white text-[13px] font-medium text-[#344054] hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-2xs cursor-pointer"
+              className="px-3 py-1.5 rounded-lg border border-[#D0D5DD] bg-white text-[13px] font-medium text-[#344054] hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-2xs"
             >
               Previous
             </button>
+            <span className="text-[13px] font-medium text-[#344054] px-2">
+              Page {currentPage} of {totalPages}
+            </span>
             <button
               type="button"
               disabled={currentPage >= totalPages}
               onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-              className="px-3.5 py-1.5 rounded-lg border border-[#D0D5DD] bg-white text-[13px] font-medium text-[#344054] hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-2xs cursor-pointer"
+              className="px-3 py-1.5 rounded-lg border border-[#D0D5DD] bg-white text-[13px] font-medium text-[#344054] hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-2xs"
             >
               Next
             </button>
           </div>
         </div>
       </div>
+
+      {/* Suspend Confirmation Modal */}
+      {suspendTarget && (
+        <SuspendAmbassadorModal
+          isOpen={Boolean(suspendTarget)}
+          onClose={() => setSuspendTarget(null)}
+          onConfirm={handleSuspendConfirm}
+          ambassadorName={suspendTarget.name}
+        />
+      )}
     </div>
   );
 };
