@@ -137,7 +137,12 @@ export const AmbassadorsTable: React.FC<{
   const deactivateMutation = useDeactivateAmbassador();
 
   // Search debounce
+  const prevSearchRef = useRef(searchQuery);
   useEffect(() => {
+    if (prevSearchRef.current === searchQuery) {
+      return;
+    }
+    prevSearchRef.current = searchQuery;
     const timer = setTimeout(() => {
       setDebouncedSearch(searchQuery.trim());
       setCurrentPage(1);

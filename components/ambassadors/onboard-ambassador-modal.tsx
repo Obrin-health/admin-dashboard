@@ -99,18 +99,11 @@ export const OnboardAmbassadorModal: React.FC<OnboardAmbassadorModalProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-[500px] p-6 rounded-2xl bg-white shadow-xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-125 p-6 rounded-2xl bg-white shadow-xl max-h-[90vh] overflow-y-auto">
         <DialogHeader className="flex flex-row items-center justify-between pb-3 border-b border-gray-100">
           <DialogTitle className="text-[18px] font-bold text-[#101828]">
             Onboard new Ambassador
           </DialogTitle>
-          <button
-            type="button"
-            onClick={onClose}
-            className="p-1 rounded-md text-gray-400 hover:text-gray-600 transition-colors"
-          >
-            <X className="w-5 h-5" />
-          </button>
         </DialogHeader>
 
         {error && (
@@ -204,7 +197,7 @@ export const OnboardAmbassadorModal: React.FC<OnboardAmbassadorModalProps> = ({
                 />
               </label>
               {photoFile && (
-                <span className="text-[12px] text-[#667085] truncate max-w-[150px]">
+                <span className="text-[12px] text-[#667085] truncate max-w-37.5">
                   {photoFile.name}
                 </span>
               )}
@@ -235,22 +228,20 @@ export const OnboardAmbassadorModal: React.FC<OnboardAmbassadorModalProps> = ({
               <button
                 type="button"
                 onClick={() => setType("Physical")}
-                className={`py-2 px-3 rounded-lg border text-[13px] font-medium transition-colors ${
-                  type === "Physical"
-                    ? "border-[#BB1A8C] bg-[#FDF2FA] text-[#BB1A8C]"
-                    : "border-[#D0D5DD] bg-white text-[#344054] hover:bg-gray-50"
-                }`}
+                className={`py-2 px-3 rounded-lg border text-[13px] font-medium transition-colors ${type === "Physical"
+                  ? "border-[#BB1A8C] bg-[#FDF2FA] text-[#BB1A8C]"
+                  : "border-[#D0D5DD] bg-white text-[#344054] hover:bg-gray-50"
+                  }`}
               >
                 Physical
               </button>
               <button
                 type="button"
                 onClick={() => setType("Digital")}
-                className={`py-2 px-3 rounded-lg border text-[13px] font-medium transition-colors ${
-                  type === "Digital"
-                    ? "border-[#BB1A8C] bg-[#FDF2FA] text-[#BB1A8C]"
-                    : "border-[#D0D5DD] bg-white text-[#344054] hover:bg-gray-50"
-                }`}
+                className={`py-2 px-3 rounded-lg border text-[13px] font-medium transition-colors ${type === "Digital"
+                  ? "border-[#BB1A8C] bg-[#FDF2FA] text-[#BB1A8C]"
+                  : "border-[#D0D5DD] bg-white text-[#344054] hover:bg-gray-50"
+                  }`}
               >
                 Digital
               </button>

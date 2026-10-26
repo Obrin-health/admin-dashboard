@@ -92,39 +92,65 @@ export function useTablePagination(options?: UseTablePaginationOptions) {
     return () => window.removeEventListener("popstate", handlePopState);
   }, [defaultPage, paramName, storageKey]);
 
-  // Stable setCurrentPage handler that updates state, sessionStorage, and browser URL
+  // Keep sessionStorage and browser URL in sync when currentPage changes
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    // 1. Update sessionStorage
+    if (storageKey) {
+      try {
+        sessionStorage.setItem(storageKey, String(currentPage));
+      } catch {
+        // ignore
+      }
+    }
+
+    // 2. Update browser address bar
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const currentParam = params.get(paramName);
+      const isDefault = currentPage === defaultPage;
+
+      // If already on default page and URL has no param, nothing to update
+      if (isDefault && !currentParam) {
+        return;
+      }
+
+      // If current param in URL already matches currentPage, nothing to update
+      if (currentParam === String(currentPage)) {
+        return;
+      }
+
+      if (isDefault) {
+        params.delete(paramName);
+      } else {
+        params.set(paramName, String(currentPage));
+      }
+
+      const queryString = params.toString();
+      const newUrl = queryString
+        ? `${window.location.pathname}?${queryString}`
+        : window.location.pathname;
+
+      // Wrap in queueMicrotask to ensure the history push occurs AFTER React's current render/commit phase
+      queueMicrotask(() => {
+        window.history.pushState(null, "", newUrl);
+      });
+    } catch {
+      // ignore
+    }
+  }, [currentPage, defaultPage, paramName, storageKey]);
+
+  // Pure state updater - side effects are cleanly isolated in useEffect
   const setCurrentPage = useCallback(
     (pageOrUpdater: number | ((prev: number) => number)) => {
       setCurrentPageInternal((prev) => {
         const next =
           typeof pageOrUpdater === "function" ? pageOrUpdater(prev) : pageOrUpdater;
-        const validPage = Math.max(1, next);
-
-        if (typeof window !== "undefined") {
-          // 1. Update sessionStorage
-          if (storageKey) {
-            try {
-              sessionStorage.setItem(storageKey, String(validPage));
-            } catch {
-              // ignore
-            }
-          }
-
-          // 2. Update browser address bar using pushState
-          const params = new URLSearchParams(window.location.search);
-          if (validPage === defaultPage && !params.has(paramName)) {
-            // Default clean URL
-          } else {
-            params.set(paramName, String(validPage));
-            const newUrl = `${window.location.pathname}?${params.toString()}`;
-            window.history.pushState(null, "", newUrl);
-          }
-        }
-
-        return validPage;
+        return Math.max(1, next);
       });
     },
-    [defaultPage, paramName, storageKey]
+    []
   );
 
   return {

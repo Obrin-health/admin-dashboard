@@ -107,7 +107,7 @@ export const EditAmbassadorModal: React.FC<EditAmbassadorModalProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-[480px] p-6 rounded-2xl bg-white shadow-xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-120 p-6 rounded-2xl bg-white shadow-xl max-h-[90vh] overflow-y-auto">
         <DialogHeader className="flex flex-row items-center justify-between pb-3 border-b border-gray-100">
           <DialogTitle className="text-[18px] font-bold text-[#101828]">
             Edit Ambassador

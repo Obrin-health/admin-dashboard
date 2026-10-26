@@ -3,18 +3,21 @@
 import React from "react";
 
 interface TeamMetricsCardProps {
-  totalMembers: number;
-  activeMembers: number;
-  disabledMembers: number;
+  totalMembers?: number;
+  activeMembers?: number;
+  disabledMembers?: number;
+  isLoading?: boolean;
 }
 
 export default function TeamMetricsCard({
-  totalMembers = 4,
-  activeMembers = 4,
-  disabledMembers = 0,
+  totalMembers,
+  activeMembers,
+  disabledMembers,
+  isLoading = false,
 }: TeamMetricsCardProps) {
-  const formatNumber = (num: number) => {
-    return num < 10 ? `0${num}` : `${num}`;
+  const formatNumber = (num?: number) => {
+    if (num === undefined || num === null) return "-";
+    return num < 10 && num >= 0 ? `0${num}` : `${num}`;
   };
 
   return (
@@ -25,9 +28,13 @@ export default function TeamMetricsCard({
           <p className="text-[13px] font-medium text-[#667085] mb-2">
             Total Members
           </p>
-          <p className="text-[32px] font-bold text-[#101828] leading-none">
-            {formatNumber(totalMembers)}
-          </p>
+          {isLoading ? (
+            <div className="h-8 w-16 bg-gray-100 animate-pulse rounded-md mt-1" />
+          ) : (
+            <p className="text-[32px] font-bold text-[#101828] leading-none">
+              {formatNumber(totalMembers)}
+            </p>
+          )}
         </div>
 
         {/* Active Members */}
@@ -35,9 +42,13 @@ export default function TeamMetricsCard({
           <p className="text-[13px] font-medium text-[#667085] mb-2">
             Active Members
           </p>
-          <p className="text-[32px] font-bold text-[#101828] leading-none">
-            {formatNumber(activeMembers)}
-          </p>
+          {isLoading ? (
+            <div className="h-8 w-16 bg-gray-100 animate-pulse rounded-md mt-1" />
+          ) : (
+            <p className="text-[32px] font-bold text-[#101828] leading-none">
+              {formatNumber(activeMembers)}
+            </p>
+          )}
         </div>
 
         {/* Disabled Members */}
@@ -45,9 +56,13 @@ export default function TeamMetricsCard({
           <p className="text-[13px] font-medium text-[#667085] mb-2">
             Disabled Members
           </p>
-          <p className="text-[32px] font-bold text-[#101828] leading-none">
-            {formatNumber(disabledMembers)}
-          </p>
+          {isLoading ? (
+            <div className="h-8 w-16 bg-gray-100 animate-pulse rounded-md mt-1" />
+          ) : (
+            <p className="text-[32px] font-bold text-[#101828] leading-none">
+              {formatNumber(disabledMembers)}
+            </p>
+          )}
         </div>
       </div>
     </div>

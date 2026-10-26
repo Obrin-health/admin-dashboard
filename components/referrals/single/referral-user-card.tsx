@@ -9,21 +9,23 @@ interface ReferralUserCardProps {
   userId?: string;
   name?: string;
   location?: string;
-  rating?: string;
+  rating?: string | number;
   joinedDate?: string;
   lastActiveDate?: string;
-  avatarUrl?: string;
+  avatarUrl?: string | null;
 }
 
 export const ReferralUserCard: React.FC<ReferralUserCardProps> = ({
-  userId = "USR-1075",
-  name = "Jane Doe",
-  location = "Chelsea, London",
+  userId = "-",
+  name = "User",
+  location = "-",
   rating = "5.0",
-  joinedDate = "Oct 2, 2026",
-  lastActiveDate = "Oct 2, 2026, 10:00AM",
-  avatarUrl = "/jane-doe-avatar.jpg",
+  joinedDate = "-",
+  lastActiveDate = "-",
+  avatarUrl,
 }) => {
+  const initial = (name || "U").charAt(0).toUpperCase();
+
   return (
     <div className="w-full rounded-2xl border border-[#EAECF0] bg-white p-6 shadow-xs flex flex-col justify-between">
       <div>
@@ -35,14 +37,20 @@ export const ReferralUserCard: React.FC<ReferralUserCardProps> = ({
         {/* Profile Header Box */}
         <div className="flex items-center justify-between p-3.5 rounded-xl border border-[#EAECF0] bg-[#FAFAFC]/60 mb-6">
           <div className="flex items-center gap-3">
-            <div className="relative size-12 rounded-full overflow-hidden border border-gray-200 bg-gray-100 shrink-0">
-              <Image
-                src={avatarUrl}
-                alt={name}
-                fill
-                className="object-cover"
-                unoptimized
-              />
+            <div className="relative size-12 rounded-full overflow-hidden border border-gray-200 bg-gray-100 shrink-0 flex items-center justify-center">
+              {avatarUrl ? (
+                <Image
+                  src={avatarUrl}
+                  alt={name}
+                  fill
+                  className="object-cover"
+                  unoptimized
+                />
+              ) : (
+                <div className="size-full bg-gradient-to-br from-[#BB1A8C] to-[#E5383B] flex items-center justify-center text-white text-base font-bold">
+                  {initial}
+                </div>
+              )}
             </div>
             <div>
               <h4 className="text-[14px] font-bold text-[#101828]">
@@ -51,19 +59,23 @@ export const ReferralUserCard: React.FC<ReferralUserCardProps> = ({
               <p className="text-[12px] text-[#0086C9] font-medium">
                 {location}
               </p>
-              <div className="flex items-center gap-1 text-[12px] text-[#344054] mt-0.5">
-                <Star className="size-3.5 fill-[#F79009] text-[#F79009]" />
-                <span className="font-semibold text-[11px]">{rating}</span>
-              </div>
+              {rating && (
+                <div className="flex items-center gap-1 text-[12px] text-[#344054] mt-0.5">
+                  <Star className="size-3.5 fill-[#F79009] text-[#F79009]" />
+                  <span className="font-semibold text-[11px]">{rating}</span>
+                </div>
+              )}
             </div>
           </div>
 
-          <Link
-            href={`/users/${userId}`}
-            className="text-[13px] font-semibold text-[#BB1A8C] hover:text-[#9B1373] hover:underline transition-colors shrink-0"
-          >
-            View user
-          </Link>
+          {userId && userId !== "-" && (
+            <Link
+              href={`/users/${userId}`}
+              className="text-[13px] font-semibold text-[#BB1A8C] hover:text-[#9B1373] hover:underline transition-colors shrink-0"
+            >
+              View user
+            </Link>
+          )}
         </div>
 
         {/* Key-Value Details */}

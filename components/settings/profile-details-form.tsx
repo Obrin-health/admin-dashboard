@@ -1,31 +1,113 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Image from "next/image";
-import { CircleUserRound, CheckCircle2 } from "lucide-react";
+import { CircleUserRound, CheckCircle2, Loader2, AlertCircle } from "lucide-react";
 import UploadImageModal from "./upload-image-modal";
+import {
+  useAdminProfile,
+  useUpdateAdminProfile,
+  useUploadAvatar,
+} from "@/hooks/use-settings";
 
 export default function ProfileDetailsForm() {
-  const [firstName, setFirstName] = useState("John");
-  const [lastName, setLastName] = useState("Doe");
-  const [email, setEmail] = useState("obrinhealth@gmail.com");
-  const [profileImage, setProfileImage] = useState<string>("/settings-avatar.jpg");
+  const { data: profile, isLoading } = useAdminProfile();
+  const updateProfileMutation = useUpdateAdminProfile();
+  const uploadAvatarMutation = useUploadAvatar();
+
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [email, setEmail] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [savedNotification, setSavedNotification] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const handleSave = (e: React.FormEvent) => {
+  useEffect(() => {
+    if (profile) {
+      setFirstName(profile.firstName || "");
+      setLastName(profile.lastName || "");
+      setEmail(profile.email || "");
+    }
+  }, [profile]);
+
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSavedNotification("Profile details saved successfully!");
-    setTimeout(() => {
-      setSavedNotification(null);
-    }, 3500);
+    setErrorMessage(null);
+    setSavedNotification(null);
+
+    const trimmedFirst = firstName.trim();
+    const trimmedLast = lastName.trim();
+    const trimmedEmail = email.trim();
+
+    if (!trimmedFirst || !trimmedLast || !trimmedEmail) {
+      setErrorMessage("Please fill in all required fields.");
+      return;
+    }
+
+    try {
+      await updateProfileMutation.mutateAsync({
+        firstName: trimmedFirst,
+        lastName: trimmedLast,
+        email: trimmedEmail,
+      });
+      setSavedNotification("Profile details saved successfully!");
+      setTimeout(() => {
+        setSavedNotification(null);
+      }, 4000);
+    } catch (err: unknown) {
+      const msg =
+        (err as { response?: { data?: { message?: string } } })?.response?.data
+          ?.message || "Failed to update profile details.";
+      setErrorMessage(msg);
+    }
   };
 
   const handleCancel = () => {
-    setFirstName("John");
-    setLastName("Doe");
-    setEmail("obrinhealth@gmail.com");
+    if (profile) {
+      setFirstName(profile.firstName || "");
+      setLastName(profile.lastName || "");
+      setEmail(profile.email || "");
+    }
+    setErrorMessage(null);
   };
+
+  const handleAvatarUpload = async (file: File) => {
+    try {
+      await uploadAvatarMutation.mutateAsync(file);
+      setIsModalOpen(false);
+      setSavedNotification("Profile image uploaded successfully!");
+      setTimeout(() => {
+        setSavedNotification(null);
+      }, 4000);
+    } catch (err: unknown) {
+      const msg =
+        (err as { response?: { data?: { message?: string } } })?.response?.data
+          ?.message || "Failed to upload profile image.";
+      setErrorMessage(msg);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="w-full font-sans select-none space-y-6">
+        <div className="border border-[#EAECF0] rounded-2xl p-6 bg-white shadow-2xs animate-pulse flex items-center gap-5">
+          <div className="w-20 h-20 rounded-2xl bg-gray-100" />
+          <div className="space-y-2">
+            <div className="h-5 w-32 bg-gray-100 rounded" />
+            <div className="h-4 w-48 bg-gray-100 rounded" />
+          </div>
+        </div>
+        <div className="space-y-4">
+          <div className="h-6 w-40 bg-gray-100 rounded" />
+          <div className="grid grid-cols-2 gap-4">
+            <div className="h-11 bg-gray-100 rounded-xl" />
+            <div className="h-11 bg-gray-100 rounded-xl" />
+          </div>
+          <div className="h-11 bg-gray-100 rounded-xl" />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full font-sans select-none">
@@ -37,14 +119,22 @@ export default function ProfileDetailsForm() {
         </div>
       )}
 
+      {/* Error Notification */}
+      {errorMessage && (
+        <div className="mb-6 flex items-center gap-2.5 p-4 rounded-xl bg-red-50 border border-red-200 text-red-800 text-sm animate-fade-in shadow-xs">
+          <AlertCircle className="w-5 h-5 text-red-600 shrink-0" />
+          <span className="font-medium">{errorMessage}</span>
+        </div>
+      )}
+
       {/* Profile Image Card */}
       <div className="border border-[#EAECF0] rounded-2xl p-5 sm:p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8 bg-white shadow-2xs">
         <div className="flex items-center gap-4 sm:gap-5">
           {/* Avatar Thumbnail */}
           <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-[#F4F5F7] flex items-center justify-center border border-[#EAECF0] overflow-hidden shrink-0 relative">
-            {profileImage ? (
+            {profile?.avatarUrl ? (
               <Image
-                src={profileImage}
+                src={profile.avatarUrl}
                 alt="Profile Avatar"
                 fill
                 sizes="80px"
@@ -103,7 +193,7 @@ export default function ProfileDetailsForm() {
                 type="text"
                 value={firstName}
                 onChange={(e) => setFirstName(e.target.value)}
-                className="w-full h-11.5 rounded-xl border border-[#D0D5DD] bg-white px-4 text-[14px] text-[#101828] placeholder:text-[#98A2B3] outline-none transition-colors focus:border-[#BB1A8C] focus:ring-1 focus:ring-[#BB1A8C]"
+                className="w-full h-11.5 rounded-xl border border-[#D0D5DD] bg-white px-4 text-[14px] text-[#101828] outline-none transition-colors focus:border-[#BB1A8C] focus:ring-1 focus:ring-[#BB1A8C]"
                 placeholder="Enter first name"
                 required
               />
@@ -121,14 +211,14 @@ export default function ProfileDetailsForm() {
                 type="text"
                 value={lastName}
                 onChange={(e) => setLastName(e.target.value)}
-                className="w-full h-11.5 rounded-xl border border-[#D0D5DD] bg-white px-4 text-[14px] text-[#101828] placeholder:text-[#98A2B3] outline-none transition-colors focus:border-[#BB1A8C] focus:ring-1 focus:ring-[#BB1A8C]"
+                className="w-full h-11.5 rounded-xl border border-[#D0D5DD] bg-white px-4 text-[14px] text-[#101828] outline-none transition-colors focus:border-[#BB1A8C] focus:ring-1 focus:ring-[#BB1A8C]"
                 placeholder="Enter last name"
                 required
               />
             </div>
           </div>
 
-          {/* Email address */}
+          {/* Email Address */}
           <div>
             <label
               htmlFor="email"
@@ -141,37 +231,47 @@ export default function ProfileDetailsForm() {
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full h-11.5 rounded-xl border border-[#D0D5DD] bg-white px-4 text-[14px] text-[#101828] placeholder:text-[#98A2B3] outline-none transition-colors focus:border-[#BB1A8C] focus:ring-1 focus:ring-[#BB1A8C]"
+              className="w-full h-11.5 rounded-xl border border-[#D0D5DD] bg-white px-4 text-[14px] text-[#101828] outline-none transition-colors focus:border-[#BB1A8C] focus:ring-1 focus:ring-[#BB1A8C]"
               placeholder="Enter email address"
               required
             />
           </div>
-        </div>
 
-        {/* Action Buttons */}
-        <div className="flex items-center justify-end gap-3 mt-10">
-          <button
-            type="submit"
-            className="py-2.5 px-6 rounded-full bg-[#BB1A8C] hover:bg-[#A01677] text-white text-[14px] font-medium shadow-xs transition-colors cursor-pointer"
-          >
-            Save changes
-          </button>
-          <button
-            type="button"
-            onClick={handleCancel}
-            className="py-2.5 px-6 rounded-full border border-[#D0D5DD] bg-white hover:bg-gray-50 text-[#344054] text-[14px] font-medium transition-colors cursor-pointer"
-          >
-            Cancel
-          </button>
+          {/* Form Actions */}
+          <div className="flex items-center gap-3 pt-6">
+            <button
+              type="submit"
+              disabled={updateProfileMutation.isPending}
+              className="py-3 px-6 rounded-xl bg-[#BB1A8C] hover:bg-[#A01677] text-white text-[14px] font-semibold shadow-xs transition-colors cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {updateProfileMutation.isPending ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>Saving...</span>
+                </>
+              ) : (
+                "Save changes"
+              )}
+            </button>
+            <button
+              type="button"
+              disabled={updateProfileMutation.isPending}
+              onClick={handleCancel}
+              className="py-3 px-6 rounded-xl border border-[#D0D5DD] bg-white hover:bg-gray-50 text-[#344054] text-[14px] font-semibold transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Cancel
+            </button>
+          </div>
         </div>
       </form>
 
-      {/* Modal Dialog */}
+      {/* Upload Image Modal */}
       <UploadImageModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        currentImage={profileImage}
-        onSave={(newImage) => setProfileImage(newImage)}
+        currentImage={profile?.avatarUrl}
+        isUploading={uploadAvatarMutation.isPending}
+        onSave={handleAvatarUpload}
       />
     </div>
   );

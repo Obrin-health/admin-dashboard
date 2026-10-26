@@ -3,10 +3,7 @@
 import React, { useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import CampaignsMetricsCard from "@/components/campaigns/campaigns-metrics-card";
-import CampaignsTable, {
-  CampaignListRow,
-  initialMockCampaignsList,
-} from "@/components/campaigns/campaigns-table";
+import CampaignsTable from "@/components/campaigns/campaigns-table";
 import CreateCampaignModal from "@/components/campaigns/create-campaign-modal";
 
 function CampaignsPageContent() {
@@ -18,26 +15,6 @@ function CampaignsPageContent() {
   const [initialModalStep] = useState<"form" | "success">(
     () => (modalParam === "success" ? "success" : "form")
   );
-  const [campaignsList, setCampaignsList] = useState<CampaignListRow[]>(
-    initialMockCampaignsList
-  );
-
-  const handleCreateSuccess = (newCamp: {
-    name: string;
-    type: "Physical" | "Digital";
-    startDate: string;
-    endDate: string;
-  }) => {
-    const created: CampaignListRow = {
-      id: String(Date.now()),
-      name: newCamp.name,
-      type: newCamp.type,
-      duration: `${newCamp.startDate} - ${newCamp.endDate}`,
-      totalReferrals: 0,
-      status: "Active",
-    };
-    setCampaignsList((prev) => [created, ...prev]);
-  };
 
   return (
     <div className="w-full max-w-[1400px] mx-auto pb-12 font-sans select-none">
@@ -64,14 +41,13 @@ function CampaignsPageContent() {
       <CampaignsMetricsCard />
 
       {/* Campaigns Table */}
-      <CampaignsTable campaigns={campaignsList} />
+      <CampaignsTable />
 
       {/* Create Campaign Modal */}
       <CreateCampaignModal
         isOpen={isCreateModalOpen}
         initialStep={initialModalStep}
         onClose={() => setIsCreateModalOpen(false)}
-        onSuccess={handleCreateSuccess}
       />
     </div>
   );

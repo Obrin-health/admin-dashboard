@@ -1,22 +1,66 @@
 "use client";
 
 import React from "react";
+import { Loader2 } from "lucide-react";
+import { useCampaignsSummary } from "@/hooks/use-campaigns";
 
 export const CampaignsMetricsCard: React.FC = () => {
+  const { data, isLoading } = useCampaignsSummary();
+
+  const formatCount = (val?: number) => {
+    if (val === undefined || val === null) return "0";
+    if (val >= 1000000) {
+      return `${(val / 1000000).toFixed(1).replace(/\.0$/, "")}M`;
+    }
+    if (val >= 1000) {
+      return `${(val / 1000).toFixed(1).replace(/\.0$/, "")}k`;
+    }
+    return val.toLocaleString();
+  };
+
+  const formatPercent = (val?: number) => {
+    if (val === undefined || val === null) return "0%";
+    return `${Math.round(val)}%`;
+  };
+
   const row1 = [
-    { label: "Total Campaigns", value: "48" },
-    { label: "Completed Campaigns", value: "30" },
-    { label: "Active Campaigns", value: "1" },
+    {
+      label: "Total Campaigns",
+      value: formatCount(data?.totalCampaigns),
+    },
+    {
+      label: "Completed Campaigns",
+      value: formatCount(data?.completedCampaigns),
+    },
+    {
+      label: "Active Campaigns",
+      value: formatCount(data?.activeCampaigns),
+    },
   ];
 
   const row2 = [
-    { label: "Total Users Acquired", value: "3k" },
-    { label: "Converted Users", value: "1.2k" },
-    { label: "Conversion Rate", value: "50%" },
+    {
+      label: "Total Users Acquired",
+      value: formatCount(data?.totalUsersAcquired),
+    },
+    {
+      label: "Converted Users",
+      value: formatCount(data?.convertedUsers),
+    },
+    {
+      label: "Conversion Rate",
+      value: formatPercent(data?.conversionRate),
+    },
   ];
 
   return (
-    <div className="w-full rounded-2xl border border-[#EAECF0] bg-white p-6 md:p-8 mb-6 shadow-xs">
+    <div className="w-full rounded-2xl border border-[#EAECF0] bg-white p-6 md:p-8 mb-6 shadow-xs relative">
+      {isLoading && !data && (
+        <div className="absolute inset-0 bg-white/70 backdrop-blur-[1px] flex items-center justify-center z-10 rounded-2xl">
+          <Loader2 className="size-6 animate-spin text-[#BB1A8C]" />
+        </div>
+      )}
+
       {/* Row 1 */}
       <div className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-[#EAECF0]">
         {row1.map((item, idx) => (

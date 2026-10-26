@@ -11,7 +11,11 @@ import {
   List,
   ListOrdered,
   Link2,
+  Loader2,
+  AlertCircle,
+  Upload,
 } from "lucide-react";
+import Image from "next/image";
 import {
   Dialog,
   DialogContent,
@@ -24,17 +28,24 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
+import { useAmbassadorsList } from "@/hooks/use-ambassadors";
+import {
+  useCreateCampaign,
+  useUploadCampaignImage,
+} from "@/hooks/use-campaigns";
+import type { CreateCampaignDto } from "@/types/campaigns";
 
 interface CreateCampaignModalProps {
   isOpen: boolean;
   onClose: () => void;
   initialStep?: "form" | "success";
-  onSuccess?: (campaignData: {
-    name: string;
-    type: "Physical" | "Digital";
-    startDate: string;
-    endDate: string;
-  }) => void;
+  onSuccess?: () => void;
+}
+
+interface SelectedAmbassador {
+  id: string;
+  name: string;
+  initial: string;
 }
 
 export const CreateCampaignModal: React.FC<CreateCampaignModalProps> = ({
@@ -44,47 +55,115 @@ export const CreateCampaignModal: React.FC<CreateCampaignModalProps> = ({
   onSuccess,
 }) => {
   const [step, setStep] = useState<"form" | "success">(initialStep);
-  const [name, setName] = useState("Lagos Women's Health Outreach Campaign");
-  const [campaignType, setCampaignType] = useState<string>("Physical");
+  const [name, setName] = useState("");
+  const [campaignType, setCampaignType] = useState<"PHYSICAL" | "DIGITAL">("PHYSICAL");
   const [description, setDescription] = useState("");
-  const [startDate, setStartDate] = useState("11-10-2024");
-  const [endDate, setEndDate] = useState("11-10-2024");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+  const [selectedAmbassadors, setSelectedAmbassadors] = useState<SelectedAmbassador[]>([]);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
-  const [ambassadors, setAmbassadors] = useState([
-    { id: "1", name: "Peter Johnson", initial: "P" },
-    { id: "2", name: "Peter Johnson", initial: "P" },
-    { id: "3", name: "Peter Johnson", initial: "P" },
-  ]);
+  // Fetch real ambassadors for the picker
+  const { data: ambassadorsData, isLoading: isAmbassadorsLoading } =
+    useAmbassadorsList({ pageSize: 100 });
+  const realAmbassadors = ambassadorsData?.items || ambassadorsData?.data || [];
 
-  const handleContinue = (e: React.FormEvent) => {
-    e.preventDefault();
-    setStep("success");
-  };
+  const createMutation = useCreateCampaign();
+  const uploadMutation = useUploadCampaignImage();
 
-  const handleFinish = () => {
-    if (onSuccess) {
-      onSuccess({
-        name: name || "New Campaign",
-        type: (campaignType as "Physical" | "Digital") || "Physical",
-        startDate,
-        endDate,
-      });
-    }
+  const resetForm = () => {
+    setName("");
+    setCampaignType("PHYSICAL");
+    setDescription("");
+    setStartDate("");
+    setEndDate("");
+    setSelectedAmbassadors([]);
+    setImageFile(null);
+    setImagePreview(null);
+    setError(null);
     setStep("form");
-    onClose();
   };
 
   const handleModalClose = () => {
-    setStep("form");
+    resetForm();
     onClose();
   };
 
-  const removeAmbassador = (id: string) => {
-    setAmbassadors((prev) => prev.filter((a) => a.id !== id));
+  const handleFinish = () => {
+    if (onSuccess) onSuccess();
+    handleModalClose();
   };
 
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setImageFile(file);
+      const url = URL.createObjectURL(file);
+      setImagePreview(url);
+    }
+  };
+
+  const removeAmbassador = (id: string) => {
+    setSelectedAmbassadors((prev) => prev.filter((a) => a.id !== id));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+
+    if (!name.trim()) {
+      setError("Campaign name is required.");
+      return;
+    }
+
+    if (!startDate || !endDate) {
+      setError("Both start and end dates are required.");
+      return;
+    }
+
+    if (new Date(startDate) > new Date(endDate)) {
+      setError("Start date must be before or equal to end date.");
+      return;
+    }
+
+    if (selectedAmbassadors.length === 0) {
+      setError("Please assign at least one ambassador to this campaign.");
+      return;
+    }
+
+    try {
+      let uploadedUrl: string | undefined = undefined;
+      if (imageFile) {
+        uploadedUrl = await uploadMutation.mutateAsync(imageFile);
+      }
+
+      const payload: CreateCampaignDto = {
+        name: name.trim(),
+        type: campaignType,
+        startDate: new Date(startDate).toISOString(),
+        endDate: new Date(endDate).toISOString(),
+        ambassadorIds: selectedAmbassadors.map((a) => a.id),
+        description: description.trim() || undefined,
+        imageUrl: uploadedUrl,
+      };
+
+      await createMutation.mutateAsync(payload);
+      setStep("success");
+    } catch (err: unknown) {
+      const axiosErr = err as { response?: { data?: { message?: string } } };
+      setError(
+        axiosErr.response?.data?.message ||
+        "Failed to create campaign. Please try again."
+      );
+    }
+  };
+
+  const isSubmitting = createMutation.isPending || uploadMutation.isPending;
+
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && handleModalClose()}>
+    <Dialog open={isOpen} onOpenChange={(open) => !open && !isSubmitting && handleModalClose()}>
       {step === "form" ? (
         <DialogContent className="max-w-[560px] p-6 md:p-7 rounded-2xl bg-white shadow-2xl border border-gray-100 max-h-[90vh] flex flex-col">
           {/* Header */}
@@ -97,17 +176,21 @@ export const CreateCampaignModal: React.FC<CreateCampaignModalProps> = ({
                 Set up a new campaign and assign it to an ambassador.
               </p>
             </div>
-            <button
-              type="button"
-              onClick={handleModalClose}
-              className="p-1 rounded-md text-gray-400 hover:text-gray-600 transition-colors cursor-pointer"
-            >
-              <X className="size-5" />
-            </button>
           </DialogHeader>
 
+          {/* Error Alert */}
+          {error && (
+            <div className="mt-3 p-3 text-xs text-red-700 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2">
+              <AlertCircle className="size-4 shrink-0" />
+              <span>{error}</span>
+            </div>
+          )}
+
           {/* Form Body - Scrollable */}
-          <form onSubmit={handleContinue} className="flex-1 overflow-y-auto pr-1 space-y-6 pt-4 text-[13px]">
+          <form
+            onSubmit={handleSubmit}
+            className="flex-1 overflow-y-auto pr-1 space-y-6 pt-4 text-[13px]"
+          >
             {/* 1. CAMPAIGN INFORMATION */}
             <div className="space-y-4">
               <h4 className="text-[11px] font-bold tracking-wider text-[#667085] uppercase">
@@ -117,7 +200,7 @@ export const CreateCampaignModal: React.FC<CreateCampaignModalProps> = ({
               {/* Campaign Name */}
               <div>
                 <label className="block text-[13px] font-medium text-[#344054] mb-1.5">
-                  Campaign Name
+                  Campaign Name <span className="text-red-500">*</span>
                 </label>
                 <div className="relative flex items-center">
                   <input
@@ -138,30 +221,68 @@ export const CreateCampaignModal: React.FC<CreateCampaignModalProps> = ({
               {/* Campaign Type */}
               <div>
                 <label className="block text-[13px] font-medium text-[#344054] mb-1.5">
-                  Campaign Type
+                  Campaign Type <span className="text-red-500">*</span>
                 </label>
                 <DropdownMenu>
                   <DropdownMenuTrigger className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-lg border border-[#D0D5DD] bg-white text-[13px] text-[#101828] hover:bg-gray-50 focus:outline-none focus:border-[#BB1A8C] transition-colors cursor-pointer text-left">
-                    <span className={campaignType ? "text-[#101828]" : "text-[#98A2B3]"}>
-                      {campaignType || "Select type"}
+                    <span>
+                      {campaignType === "PHYSICAL" ? "Physical" : "Digital"}
                     </span>
                     <ChevronDown className="size-4 text-[#667085]" />
                   </DropdownMenuTrigger>
                   <DropdownMenuContent className="w-[500px]">
-                    {["Physical", "Digital"].map((t) => (
-                      <DropdownMenuItem
-                        key={t}
-                        onClick={() => setCampaignType(t)}
-                        className="text-[13px] cursor-pointer"
-                      >
-                        {t}
-                      </DropdownMenuItem>
-                    ))}
+                    <DropdownMenuItem
+                      onClick={() => setCampaignType("PHYSICAL")}
+                      className="text-[13px] cursor-pointer"
+                    >
+                      Physical
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => setCampaignType("DIGITAL")}
+                      className="text-[13px] cursor-pointer"
+                    >
+                      Digital
+                    </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>
 
-              {/* Description Rich Text Area */}
+              {/* Campaign Image Upload */}
+              <div>
+                <label className="block text-[13px] font-medium text-[#344054] mb-1.5">
+                  Campaign Banner / Image
+                </label>
+                <div className="flex items-center gap-4">
+                  {imagePreview ? (
+                    <div className="relative size-16 rounded-xl overflow-hidden border border-gray-200 bg-gray-50 shrink-0">
+                      <Image
+                        src={imagePreview}
+                        alt="Campaign preview"
+                        fill
+                        className="object-cover"
+                        unoptimized
+                      />
+                    </div>
+                  ) : null}
+                  <label className="inline-flex items-center gap-2 px-3.5 py-2 rounded-lg border border-[#D0D5DD] bg-white text-[13px] font-medium text-[#344054] hover:bg-gray-50 transition-colors shadow-2xs cursor-pointer">
+                    <Upload className="size-4 text-[#667085]" />
+                    <span>{imageFile ? "Change Image" : "Upload Image"}</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageChange}
+                      className="hidden"
+                    />
+                  </label>
+                  {imageFile && (
+                    <span className="text-xs text-[#667085] truncate max-w-[200px]">
+                      {imageFile.name}
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Description Text Area */}
               <div>
                 <label className="block text-[13px] font-medium text-[#344054] mb-1.5">
                   Description
@@ -169,7 +290,7 @@ export const CreateCampaignModal: React.FC<CreateCampaignModalProps> = ({
                 <div className="rounded-lg border border-[#D0D5DD] focus-within:border-[#BB1A8C] focus-within:ring-1 focus-within:ring-[#BB1A8C] transition-colors overflow-hidden bg-white">
                   <textarea
                     rows={4}
-                    placeholder="Enter description"
+                    placeholder="Enter campaign description..."
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
                     className="w-full p-3.5 text-[13px] text-[#101828] placeholder-[#98A2B3] resize-none focus:outline-none border-none"
@@ -235,31 +356,31 @@ export const CreateCampaignModal: React.FC<CreateCampaignModalProps> = ({
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-[13px] font-medium text-[#344054] mb-1.5">
-                    Start Date
+                    Start Date <span className="text-red-500">*</span>
                   </label>
                   <div className="relative flex items-center">
                     <input
-                      type="text"
+                      type="date"
+                      required
                       value={startDate}
                       onChange={(e) => setStartDate(e.target.value)}
-                      className="w-full pl-3.5 pr-10 py-2.5 rounded-lg border border-[#D0D5DD] text-[13px] text-[#101828] focus:outline-none focus:border-[#BB1A8C]"
+                      className="w-full px-3.5 py-2.5 rounded-lg border border-[#D0D5DD] text-[13px] text-[#101828] focus:outline-none focus:border-[#BB1A8C]"
                     />
-                    <Calendar className="absolute right-3.5 size-4 text-[#667085] pointer-events-none" />
                   </div>
                 </div>
 
                 <div>
                   <label className="block text-[13px] font-medium text-[#344054] mb-1.5">
-                    End Date
+                    End Date <span className="text-red-500">*</span>
                   </label>
                   <div className="relative flex items-center">
                     <input
-                      type="text"
+                      type="date"
+                      required
                       value={endDate}
                       onChange={(e) => setEndDate(e.target.value)}
-                      className="w-full pl-3.5 pr-10 py-2.5 rounded-lg border border-[#D0D5DD] text-[13px] text-[#101828] focus:outline-none focus:border-[#BB1A8C]"
+                      className="w-full px-3.5 py-2.5 rounded-lg border border-[#D0D5DD] text-[13px] text-[#101828] focus:outline-none focus:border-[#BB1A8C]"
                     />
-                    <Calendar className="absolute right-3.5 size-4 text-[#667085] pointer-events-none" />
                   </div>
                 </div>
               </div>
@@ -267,59 +388,87 @@ export const CreateCampaignModal: React.FC<CreateCampaignModalProps> = ({
               {/* Ambassadors Select & Tags */}
               <div>
                 <label className="block text-[13px] font-medium text-[#344054] mb-1.5">
-                  Ambassadors
+                  Assign Ambassadors <span className="text-red-500">*</span>
                 </label>
                 <DropdownMenu>
                   <DropdownMenuTrigger className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-lg border border-[#D0D5DD] bg-white text-[13px] text-[#101828] hover:bg-gray-50 focus:outline-none focus:border-[#BB1A8C] transition-colors cursor-pointer text-left">
-                    <span>{ambassadors.length} Ambassadors added</span>
+                    <span>
+                      {selectedAmbassadors.length === 0
+                        ? "Select ambassadors..."
+                        : `${selectedAmbassadors.length} Ambassador${selectedAmbassadors.length > 1 ? "s" : ""
+                        } selected`}
+                    </span>
                     <ChevronDown className="size-4 text-[#667085]" />
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent className="w-[500px]">
-                    {[
-                      "Peter Johnson",
-                      "James Werinipre",
-                      "Boluwatife Olusola",
-                      "Kanyisola Adepeju",
-                    ].map((name) => (
-                      <DropdownMenuItem
-                        key={name}
-                        onClick={() => {
-                          if (ambassadors.some((a) => a.name === name)) return;
-                          setAmbassadors((prev) => [
-                            ...prev,
-                            { id: String(Date.now()), name, initial: name[0] },
-                          ]);
-                        }}
-                        className="text-[13px] cursor-pointer"
-                      >
-                        + Add {name}
-                      </DropdownMenuItem>
-                    ))}
+                  <DropdownMenuContent className="w-[500px] max-h-60 overflow-y-auto">
+                    {isAmbassadorsLoading ? (
+                      <div className="py-4 text-center text-xs text-[#667085]">
+                        <Loader2 className="size-4 animate-spin inline-block mr-2" />
+                        Loading ambassadors...
+                      </div>
+                    ) : realAmbassadors.length === 0 ? (
+                      <div className="py-4 text-center text-xs text-[#667085]">
+                        No ambassadors found.
+                      </div>
+                    ) : (
+                      realAmbassadors.map((amb) => {
+                        const ambName = amb.fullName || amb.name || "Ambassador";
+                        const isSelected = selectedAmbassadors.some(
+                          (a) => a.id === amb.id
+                        );
+                        return (
+                          <DropdownMenuItem
+                            key={amb.id}
+                            disabled={isSelected}
+                            onClick={() => {
+                              if (isSelected) return;
+                              setSelectedAmbassadors((prev) => [
+                                ...prev,
+                                {
+                                  id: amb.id,
+                                  name: ambName,
+                                  initial: ambName[0]?.toUpperCase() || "A",
+                                },
+                              ]);
+                            }}
+                            className={`text-[13px] cursor-pointer flex items-center justify-between ${isSelected ? "opacity-50" : ""
+                              }`}
+                          >
+                            <span>{ambName}</span>
+                            {isSelected && (
+                              <span className="text-xs text-[#BB1A8C]">Added</span>
+                            )}
+                          </DropdownMenuItem>
+                        );
+                      })
+                    )}
                   </DropdownMenuContent>
                 </DropdownMenu>
 
                 {/* Selected Ambassador Dark Pills */}
-                <div className="flex flex-wrap items-center gap-2 mt-3">
-                  {ambassadors.map((amb) => (
-                    <div
-                      key={amb.id}
-                      className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#1D2939] text-white text-[12px] shadow-xs"
-                    >
-                      <span className="size-4 rounded-full bg-white text-[#1D2939] text-[10px] font-bold flex items-center justify-center">
-                        {amb.initial}
-                      </span>
-                      <span>{amb.name}</span>
-                      <button
-                        type="button"
-                        onClick={() => removeAmbassador(amb.id)}
-                        className="text-gray-400 hover:text-white transition-colors cursor-pointer ml-1"
-                        title="Remove"
+                {selectedAmbassadors.length > 0 && (
+                  <div className="flex flex-wrap items-center gap-2 mt-3">
+                    {selectedAmbassadors.map((amb) => (
+                      <div
+                        key={amb.id}
+                        className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#1D2939] text-white text-[12px] shadow-xs"
                       >
-                        <X className="size-3" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
+                        <span className="size-4 rounded-full bg-white text-[#1D2939] text-[10px] font-bold flex items-center justify-center">
+                          {amb.initial}
+                        </span>
+                        <span>{amb.name}</span>
+                        <button
+                          type="button"
+                          onClick={() => removeAmbassador(amb.id)}
+                          className="text-gray-400 hover:text-white transition-colors cursor-pointer ml-1"
+                          title="Remove"
+                        >
+                          <X className="size-3" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
 
@@ -327,14 +476,17 @@ export const CreateCampaignModal: React.FC<CreateCampaignModalProps> = ({
             <div className="flex items-center justify-end gap-3 pt-5 border-t border-[#EAECF0]">
               <button
                 type="submit"
-                className="py-2.5 px-8 rounded-xl bg-[#BB1A8C] hover:bg-[#A01677] text-white text-[13px] font-semibold transition-colors shadow-xs cursor-pointer"
+                disabled={isSubmitting}
+                className="py-2.5 px-8 rounded-xl bg-[#BB1A8C] hover:bg-[#A01677] text-white text-[13px] font-semibold transition-colors shadow-xs cursor-pointer inline-flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Continue
+                {isSubmitting && <Loader2 className="size-4 animate-spin" />}
+                <span>{isSubmitting ? "Creating..." : "Continue"}</span>
               </button>
               <button
                 type="button"
+                disabled={isSubmitting}
                 onClick={handleModalClose}
-                className="py-2.5 px-6 rounded-xl border border-[#D0D5DD] bg-white text-[#BB1A8C] hover:bg-gray-50 text-[13px] font-medium transition-colors cursor-pointer"
+                className="py-2.5 px-6 rounded-xl border border-[#D0D5DD] bg-white text-[#BB1A8C] hover:bg-gray-50 text-[13px] font-medium transition-colors cursor-pointer disabled:opacity-50"
               >
                 Go back
               </button>
@@ -342,7 +494,7 @@ export const CreateCampaignModal: React.FC<CreateCampaignModalProps> = ({
           </form>
         </DialogContent>
       ) : (
-        /* SUCCESS STEP (Image 2) */
+        /* SUCCESS STEP */
         <DialogContent className="max-w-[420px] p-8 rounded-2xl bg-white shadow-2xl border border-gray-100 flex flex-col items-center text-center">
           {/* Close button top right */}
           <button

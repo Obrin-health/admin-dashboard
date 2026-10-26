@@ -7,53 +7,36 @@ import AddTeamMemberModal from "@/components/team/add-team-member-modal";
 import InviteSuccessModal from "@/components/team/invite-success-modal";
 import DisableMemberModal from "@/components/team/disable-member-modal";
 import DeleteMemberModal from "@/components/team/delete-member-modal";
-import EditTeamMemberModal, { TeamMember } from "@/components/team/edit-team-member-modal";
-
-const initialTeamMembers: TeamMember[] = [
-  {
-    id: "1",
-    name: "John Doe",
-    email: "peter@gmail.com",
-    role: "Super Admin",
-    dateJoined: "Sept, 10, 2023",
-    lastActive: "Sept, 10, 2023",
-    status: "Active",
-    avatarInitials: "JD",
-  },
-  {
-    id: "2",
-    name: "Jane Doe",
-    email: "james@gmail.com",
-    role: "Admin",
-    dateJoined: "Sept, 10, 2023",
-    lastActive: "Sept, 10, 2023",
-    status: "Active",
-    avatarInitials: "JD",
-  },
-  {
-    id: "3",
-    name: "Robin Hood",
-    email: "jamal@gmail.com",
-    role: "Admin",
-    dateJoined: "Sept, 10, 2023",
-    lastActive: "Sept, 10, 2023",
-    status: "Inactive",
-    avatarInitials: "JD",
-  },
-  {
-    id: "4",
-    name: "Anna Ruth",
-    email: "mark@gmail.com",
-    role: "Support",
-    dateJoined: "Sept, 10, 2023",
-    lastActive: "Sept, 10, 2023",
-    status: "Disabled",
-    avatarInitials: "JD",
-  },
-];
+import EditTeamMemberModal, {
+  TeamMember,
+  EditTeamMemberPayload,
+} from "@/components/team/edit-team-member-modal";
+import {
+  useTeamSummary,
+  useInviteTeamMember,
+  useUpdateTeamMember,
+  useDisableTeamMember,
+  useEnableTeamMember,
+  useDeleteTeamMember,
+  useResendInviteTeamMember,
+} from "@/hooks/use-team";
+import { useCurrentUser } from "@/hooks/use-auth";
+import type { TeamRole } from "@/types/team";
 
 function TeamPageContent() {
-  const [members, setMembers] = useState<TeamMember[]>(initialTeamMembers);
+  // Current logged in user
+  const { data: currentUser } = useCurrentUser();
+
+  // Summary metrics query
+  const { data: summary, isLoading: isSummaryLoading } = useTeamSummary();
+
+  // Mutations
+  const inviteMutation = useInviteTeamMember();
+  const updateMutation = useUpdateTeamMember();
+  const disableMutation = useDisableTeamMember();
+  const enableMutation = useEnableTeamMember();
+  const deleteMutation = useDeleteTeamMember();
+  const resendInviteMutation = useResendInviteTeamMember();
 
   // Modal States
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -64,77 +47,102 @@ function TeamPageContent() {
   const [memberToDelete, setMemberToDelete] = useState<TeamMember | null>(null);
   const [memberToEdit, setMemberToEdit] = useState<TeamMember | null>(null);
 
-  // Compute metrics
-  const totalMembers = members.length;
-  const activeMembers = members.filter((m) => m.status === "Active").length;
-  const disabledMembers = members.filter((m) => m.status === "Disabled").length;
+  // Extract metrics safely
+  const totalMembers = summary?.totalMembers ?? summary?.total;
+  const activeMembers = summary?.activeMembers ?? summary?.active;
+  const disabledMembers = summary?.disabledMembers ?? summary?.disabled;
 
-  const handleAddMember = (newMemberData: {
+  const handleAddMember = async (newMemberData: {
     firstName: string;
     lastName: string;
     email: string;
-    role: string;
+    role: TeamRole;
   }) => {
-    const fullName = `${newMemberData.firstName} ${newMemberData.lastName}`.trim();
-    const initials =
-      `${newMemberData.firstName[0] || ""}${newMemberData.lastName[0] || ""}`.toUpperCase() ||
-      "JD";
-
-    const newMember: TeamMember = {
-      id: Date.now().toString(),
-      name: fullName,
-      email: newMemberData.email,
-      role: newMemberData.role as "Super Admin" | "Admin" | "Support",
-      dateJoined: new Date().toLocaleDateString("en-US", {
-        month: "short",
-        day: "2-digit",
-        year: "numeric",
-      }),
-      lastActive: new Date().toLocaleDateString("en-US", {
-        month: "short",
-        day: "2-digit",
-        year: "numeric",
-      }),
-      status: "Active",
-      avatarInitials: initials,
-    };
-
-    setMembers((prev) => [newMember, ...prev]);
-    setIsAddModalOpen(false);
-    setLastInvitedMemberName(fullName);
-    setIsSuccessModalOpen(true);
+    try {
+      await inviteMutation.mutateAsync({
+        firstName: newMemberData.firstName,
+        lastName: newMemberData.lastName,
+        email: newMemberData.email,
+        role: newMemberData.role,
+      });
+      setIsAddModalOpen(false);
+      setLastInvitedMemberName(
+        `${newMemberData.firstName} ${newMemberData.lastName}`.trim()
+      );
+      setIsSuccessModalOpen(true);
+    } catch (err: unknown) {
+      console.error("Failed to invite team member", err);
+    }
   };
 
-  const handleConfirmDisable = () => {
-    if (!memberToDisable) return;
-    setMembers((prev) =>
-      prev.map((m) => {
-        if (m.id === memberToDisable.id) {
-          return {
-            ...m,
-            status: m.status === "Disabled" ? "Active" : "Disabled",
-          };
-        }
-        return m;
-      })
+  const handleSaveEdit = async (payload: EditTeamMemberPayload) => {
+    try {
+      await updateMutation.mutateAsync({
+        id: payload.id,
+        payload: {
+          firstName: payload.firstName,
+          lastName: payload.lastName,
+          email: payload.email,
+          role: payload.role,
+        },
+      });
+      setMemberToEdit(null);
+    } catch (err: unknown) {
+      console.error("Failed to update team member", err);
+    }
+  };
+
+  const isSelf = (m?: TeamMember | null) => {
+    if (!m || !currentUser) return false;
+    return (
+      (currentUser.id && String(currentUser.id) === String(m.id)) ||
+      (currentUser.email &&
+        m.email &&
+        currentUser.email.toLowerCase() === m.email.toLowerCase())
     );
-    setMemberToDisable(null);
   };
 
-  const handleConfirmDelete = () => {
-    if (!memberToDelete) return;
-    setMembers((prev) => prev.filter((m) => m.id !== memberToDelete.id));
-    setMemberToDelete(null);
+  const handleConfirmDisable = async () => {
+    if (!memberToDisable || isSelf(memberToDisable)) {
+      setMemberToDisable(null);
+      return;
+    }
+    try {
+      if (memberToDisable.status === "Disabled") {
+        await enableMutation.mutateAsync(memberToDisable.id);
+      } else {
+        await disableMutation.mutateAsync(memberToDisable.id);
+      }
+      setMemberToDisable(null);
+    } catch (err: unknown) {
+      console.error("Failed to update member status", err);
+    }
   };
 
-  const handleSaveEdit = (updatedMember: TeamMember) => {
-    setMembers((prev) =>
-      prev.map((m) => (m.id === updatedMember.id ? updatedMember : m))
-    );
+  const handleConfirmDelete = async () => {
+    if (!memberToDelete || isSelf(memberToDelete)) {
+      setMemberToDelete(null);
+      return;
+    }
+    try {
+      await deleteMutation.mutateAsync(memberToDelete.id);
+      setMemberToDelete(null);
+    } catch (err: unknown) {
+      console.error("Failed to delete team member", err);
+    }
+  };
+
+  const handleResendInvite = async (member: TeamMember) => {
+    if (isSelf(member)) return;
+    try {
+      await resendInviteMutation.mutateAsync(member.id);
+    } catch (err: unknown) {
+      console.error("Failed to resend invite", err);
+    }
   };
 
   return (
-    <div className="w-full max-w-[1400px] mx-auto pb-12 font-sans select-none">
+    <div className="w-full max-w-350 mx-auto pb-12 font-sans select-none">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
@@ -159,35 +167,53 @@ function TeamPageContent() {
         totalMembers={totalMembers}
         activeMembers={activeMembers}
         disabledMembers={disabledMembers}
+        isLoading={isSummaryLoading}
       />
 
       {/* Team Table */}
       <TeamTable
-        members={members}
         onEdit={(m) => setMemberToEdit(m)}
         onDisableToggle={(m) => setMemberToDisable(m)}
         onDelete={(m) => setMemberToDelete(m)}
+        onResendInvite={handleResendInvite}
       />
 
-      {/* Add Team Member Modal (Image 2) */}
+      {/* Add Team Member Modal */}
       <AddTeamMemberModal
         isOpen={isAddModalOpen}
+        isSubmitting={inviteMutation.isPending}
         onClose={() => setIsAddModalOpen(false)}
         onSubmit={handleAddMember}
       />
 
-      {/* Successfully Invited Modal (Image 3) */}
+      {/* Successfully Invited Modal */}
       <InviteSuccessModal
         isOpen={isSuccessModalOpen}
         onClose={() => setIsSuccessModalOpen(false)}
-        message="You have successfully invited an admin user"
+        message={
+          lastInvitedMemberName
+            ? `You have successfully invited ${lastInvitedMemberName} to the team.`
+            : "You have successfully invited an admin user."
+        }
       />
 
-      {/* Disable Member Confirmation Modal (Image 4) */}
+      {/* Edit Team Member Modal */}
+      <EditTeamMemberModal
+        isOpen={!!memberToEdit}
+        member={memberToEdit}
+        isSubmitting={updateMutation.isPending}
+        onClose={() => setMemberToEdit(null)}
+        onSave={handleSaveEdit}
+      />
+
+      {/* Disable Member Confirmation Modal */}
       <DisableMemberModal
         isOpen={!!memberToDisable}
         memberName={memberToDisable?.name}
         isCurrentlyDisabled={memberToDisable?.status === "Disabled"}
+        isSubmitting={
+          disableMutation.isPending || enableMutation.isPending
+        }
         onClose={() => setMemberToDisable(null)}
         onConfirm={handleConfirmDisable}
       />
@@ -196,16 +222,9 @@ function TeamPageContent() {
       <DeleteMemberModal
         isOpen={!!memberToDelete}
         memberName={memberToDelete?.name}
+        isSubmitting={deleteMutation.isPending}
         onClose={() => setMemberToDelete(null)}
         onConfirm={handleConfirmDelete}
-      />
-
-      {/* Edit Member Modal */}
-      <EditTeamMemberModal
-        isOpen={!!memberToEdit}
-        member={memberToEdit}
-        onClose={() => setMemberToEdit(null)}
-        onSave={handleSaveEdit}
       />
     </div>
   );
@@ -213,7 +232,13 @@ function TeamPageContent() {
 
 export default function TeamPage() {
   return (
-    <Suspense fallback={<div className="p-8 text-[#667085] text-sm">Loading team...</div>}>
+    <Suspense
+      fallback={
+        <div className="w-full h-96 flex items-center justify-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#BB1A8C]" />
+        </div>
+      }
+    >
       <TeamPageContent />
     </Suspense>
   );

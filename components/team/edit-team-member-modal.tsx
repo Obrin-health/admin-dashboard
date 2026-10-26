@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { X, ChevronDown, Check } from "lucide-react";
+import { X, ChevronDown, Check, Loader2 } from "lucide-react";
+import type { TeamRole } from "@/types/team";
 
 export interface TeamMember {
   id: string;
@@ -16,31 +17,47 @@ export interface TeamMember {
   avatarInitials: string;
 }
 
+export interface EditTeamMemberPayload {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  role: TeamRole;
+}
+
 interface EditTeamMemberModalProps {
   isOpen: boolean;
   member: TeamMember | null;
+  isSubmitting?: boolean;
   onClose: () => void;
-  onSave: (updated: TeamMember) => void;
+  onSave: (payload: EditTeamMemberPayload) => void;
 }
 
 export default function EditTeamMemberModal({
   isOpen,
   member,
+  isSubmitting = false,
   onClose,
   onSave,
 }: EditTeamMemberModalProps) {
-  const [name, setName] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<"Super Admin" | "Admin" | "Support">("Admin");
-  const [status, setStatus] = useState<"Active" | "Inactive" | "Disabled">("Active");
   const [isRoleDropdownOpen, setIsRoleDropdownOpen] = useState(false);
 
   useEffect(() => {
     if (member) {
-      setName(member.name);
-      setEmail(member.email);
-      setRole(member.role);
-      setStatus(member.status);
+      if (member.firstName || member.lastName) {
+        setFirstName(member.firstName || "");
+        setLastName(member.lastName || "");
+      } else {
+        const parts = (member.name || "").trim().split(/\s+/);
+        setFirstName(parts[0] || "");
+        setLastName(parts.slice(1).join(" ") || "");
+      }
+      setEmail(member.email || "");
+      setRole(member.role || "Admin");
     }
   }, [member]);
 
@@ -52,27 +69,34 @@ export default function EditTeamMemberModal({
     "Support",
   ];
 
+  const mapRoleToApi = (r: "Super Admin" | "Admin" | "Support"): TeamRole => {
+    switch (r) {
+      case "Super Admin":
+        return "SUPER_ADMIN";
+      case "Support":
+        return "SUPPORT";
+      default:
+        return "ADMIN";
+    }
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const trimmedName = name.trim();
-    const initials = trimmedName
-      .split(/\s+/)
-      .filter(Boolean)
-      .map((w) => w[0])
-      .slice(0, 2)
-      .join("")
-      .toUpperCase();
-    const avatarInitials = initials || member.avatarInitials;
+    const trimmedFirst = firstName.trim();
+    const trimmedLast = lastName.trim();
+    const trimmedEmail = email.trim();
+
+    if (!trimmedFirst || !trimmedLast || !trimmedEmail) {
+      return;
+    }
 
     onSave({
-      ...member,
-      name: trimmedName,
-      email: email.trim(),
-      role,
-      status,
-      avatarInitials,
+      id: member.id,
+      firstName: trimmedFirst,
+      lastName: trimmedLast,
+      email: trimmedEmail,
+      role: mapRoleToApi(role),
     });
-    onClose();
   };
 
   return (
@@ -80,7 +104,7 @@ export default function EditTeamMemberModal({
       {/* Backdrop */}
       <div
         className="fixed inset-0 bg-black/60 backdrop-blur-xs transition-opacity animate-fade-in"
-        onClick={onClose}
+        onClick={!isSubmitting ? onClose : undefined}
       />
 
       {/* Modal Card */}
@@ -92,13 +116,14 @@ export default function EditTeamMemberModal({
               Edit team member
             </h2>
             <p className="text-[14px] text-[#667085] mt-1">
-              Update team member role and details below
+              Update team member details and access role below
             </p>
           </div>
           <button
             type="button"
+            disabled={isSubmitting}
             onClick={onClose}
-            className="p-1 rounded-full text-[#667085] hover:text-[#101828] hover:bg-gray-100 transition-colors cursor-pointer"
+            className="p-1 rounded-full text-[#667085] hover:text-[#101828] hover:bg-gray-100 transition-colors cursor-pointer disabled:opacity-50"
             aria-label="Close dialog"
           >
             <X className="w-5 h-5" />
@@ -106,18 +131,35 @@ export default function EditTeamMemberModal({
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="space-y-5">
-          <div>
-            <label className="block text-[13px] font-medium text-[#344054] mb-1.5">
-              Full name
-            </label>
-            <input
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="w-full h-11 rounded-xl border border-[#D0D5DD] bg-white px-3.5 text-[14px] text-[#101828] outline-none transition-colors focus:border-[#BB1A8C]"
-              required
-            />
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-[13px] font-medium text-[#344054] mb-1.5">
+                First name
+              </label>
+              <input
+                type="text"
+                value={firstName}
+                onChange={(e) => setFirstName(e.target.value)}
+                className="w-full h-11 rounded-xl border border-[#D0D5DD] bg-white px-3.5 text-[14px] text-[#101828] outline-none transition-colors focus:border-[#BB1A8C]"
+                required
+                disabled={isSubmitting}
+              />
+            </div>
+
+            <div>
+              <label className="block text-[13px] font-medium text-[#344054] mb-1.5">
+                Last name
+              </label>
+              <input
+                type="text"
+                value={lastName}
+                onChange={(e) => setLastName(e.target.value)}
+                className="w-full h-11 rounded-xl border border-[#D0D5DD] bg-white px-3.5 text-[14px] text-[#101828] outline-none transition-colors focus:border-[#BB1A8C]"
+                required
+                disabled={isSubmitting}
+              />
+            </div>
           </div>
 
           <div>
@@ -130,6 +172,7 @@ export default function EditTeamMemberModal({
               onChange={(e) => setEmail(e.target.value)}
               className="w-full h-11 rounded-xl border border-[#D0D5DD] bg-white px-3.5 text-[14px] text-[#101828] outline-none transition-colors focus:border-[#BB1A8C]"
               required
+              disabled={isSubmitting}
             />
           </div>
 
@@ -139,8 +182,9 @@ export default function EditTeamMemberModal({
             </label>
             <button
               type="button"
+              disabled={isSubmitting}
               onClick={() => setIsRoleDropdownOpen((prev) => !prev)}
-              className="w-full h-11 rounded-xl border border-[#D0D5DD] bg-white px-3.5 flex items-center justify-between text-[14px] text-[#101828] outline-none transition-colors hover:border-[#98A2B3] focus:border-[#BB1A8C] cursor-pointer"
+              className="w-full h-11 rounded-xl border border-[#D0D5DD] bg-white px-3.5 flex items-center justify-between text-[14px] text-[#101828] outline-none transition-colors hover:border-[#98A2B3] focus:border-[#BB1A8C] cursor-pointer disabled:opacity-50"
             >
               <span>{role}</span>
               <ChevronDown className="w-4 h-4 text-[#667085]" />
@@ -171,14 +215,23 @@ export default function EditTeamMemberModal({
           <div className="flex items-center gap-3 pt-3">
             <button
               type="submit"
-              className="flex-1 py-3 rounded-xl bg-[#BB1A8C] hover:bg-[#A01677] text-white text-[14px] font-semibold shadow-xs transition-colors cursor-pointer"
+              disabled={isSubmitting}
+              className="flex-1 py-3 rounded-xl bg-[#BB1A8C] hover:bg-[#A01677] text-white text-[14px] font-semibold shadow-xs transition-colors cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Save changes
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>Saving...</span>
+                </>
+              ) : (
+                "Save changes"
+              )}
             </button>
             <button
               type="button"
+              disabled={isSubmitting}
               onClick={onClose}
-              className="flex-1 py-3 rounded-xl border border-[#D0D5DD] bg-white hover:bg-gray-50 text-[#344054] text-[14px] font-semibold transition-colors cursor-pointer"
+              className="flex-1 py-3 rounded-xl border border-[#D0D5DD] bg-white hover:bg-gray-50 text-[#344054] text-[14px] font-semibold transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Cancel
             </button>

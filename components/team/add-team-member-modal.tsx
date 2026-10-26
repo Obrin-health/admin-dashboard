@@ -1,33 +1,51 @@
 "use client";
 
 import React, { useState } from "react";
-import { X, ChevronDown, Check } from "lucide-react";
+import { X, ChevronDown, Check, Loader2 } from "lucide-react";
+import type { TeamRole } from "@/types/team";
 
 interface AddTeamMemberModalProps {
   isOpen: boolean;
+  isSubmitting?: boolean;
   onClose: () => void;
   onSubmit: (member: {
     firstName: string;
     lastName: string;
     email: string;
-    role: string;
+    role: TeamRole;
   }) => void;
 }
 
 export default function AddTeamMemberModal({
   isOpen,
+  isSubmitting = false,
   onClose,
   onSubmit,
 }: AddTeamMemberModalProps) {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
-  const [role, setRole] = useState("Admin");
+  const [role, setRole] = useState<"Super Admin" | "Admin" | "Support">("Admin");
   const [isRoleDropdownOpen, setIsRoleDropdownOpen] = useState(false);
 
   if (!isOpen) return null;
 
-  const roleOptions = ["Super Admin", "Admin", "Support"];
+  const roleOptions: ("Super Admin" | "Admin" | "Support")[] = [
+    "Super Admin",
+    "Admin",
+    "Support",
+  ];
+
+  const mapRoleToApi = (r: "Super Admin" | "Admin" | "Support"): TeamRole => {
+    switch (r) {
+      case "Super Admin":
+        return "SUPER_ADMIN";
+      case "Support":
+        return "SUPPORT";
+      default:
+        return "ADMIN";
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -35,21 +53,24 @@ export default function AddTeamMemberModal({
     const trimmedLast = lastName.trim();
     const trimmedEmail = email.trim();
     if (!trimmedFirst || !trimmedLast || !trimmedEmail) {
-      alert("Please fill in all required fields.");
       return;
     }
     onSubmit({
       firstName: trimmedFirst,
       lastName: trimmedLast,
       email: trimmedEmail,
-      role: role || "Admin",
+      role: mapRoleToApi(role),
     });
-    // Reset form
+  };
+
+  const handleClose = () => {
+    if (isSubmitting) return;
     setFirstName("");
     setLastName("");
     setEmail("");
     setRole("Admin");
     setIsRoleDropdownOpen(false);
+    onClose();
   };
 
   return (
@@ -57,7 +78,7 @@ export default function AddTeamMemberModal({
       {/* Backdrop */}
       <div
         className="fixed inset-0 bg-black/60 backdrop-blur-xs transition-opacity animate-fade-in"
-        onClick={onClose}
+        onClick={handleClose}
       />
 
       {/* Modal Card */}
@@ -74,8 +95,9 @@ export default function AddTeamMemberModal({
           </div>
           <button
             type="button"
-            onClick={onClose}
-            className="p-1 rounded-full text-[#667085] hover:text-[#101828] hover:bg-gray-100 transition-colors cursor-pointer"
+            disabled={isSubmitting}
+            onClick={handleClose}
+            className="p-1 rounded-full text-[#667085] hover:text-[#101828] hover:bg-gray-100 transition-colors cursor-pointer disabled:opacity-50"
             aria-label="Close dialog"
           >
             <X className="w-5 h-5" />
@@ -101,6 +123,7 @@ export default function AddTeamMemberModal({
                 onChange={(e) => setFirstName(e.target.value)}
                 className="w-full h-11 rounded-xl border border-[#D0D5DD] bg-white px-3.5 text-[14px] text-[#101828] placeholder:text-[#98A2B3] outline-none transition-colors focus:border-[#BB1A8C] focus:ring-1 focus:ring-[#BB1A8C]"
                 required
+                disabled={isSubmitting}
               />
             </div>
 
@@ -119,6 +142,7 @@ export default function AddTeamMemberModal({
                 onChange={(e) => setLastName(e.target.value)}
                 className="w-full h-11 rounded-xl border border-[#D0D5DD] bg-white px-3.5 text-[14px] text-[#101828] placeholder:text-[#98A2B3] outline-none transition-colors focus:border-[#BB1A8C] focus:ring-1 focus:ring-[#BB1A8C]"
                 required
+                disabled={isSubmitting}
               />
             </div>
           </div>
@@ -139,6 +163,7 @@ export default function AddTeamMemberModal({
               onChange={(e) => setEmail(e.target.value)}
               className="w-full h-11 rounded-xl border border-[#D0D5DD] bg-white px-3.5 text-[14px] text-[#101828] placeholder:text-[#98A2B3] outline-none transition-colors focus:border-[#BB1A8C] focus:ring-1 focus:ring-[#BB1A8C]"
               required
+              disabled={isSubmitting}
             />
           </div>
 
@@ -149,10 +174,11 @@ export default function AddTeamMemberModal({
             </label>
             <button
               type="button"
+              disabled={isSubmitting}
               onClick={() => setIsRoleDropdownOpen((prev) => !prev)}
-              className="w-full h-11 rounded-xl border border-[#D0D5DD] bg-white px-3.5 flex items-center justify-between text-[14px] text-[#101828] outline-none transition-colors hover:border-[#98A2B3] focus:border-[#BB1A8C] cursor-pointer"
+              className="w-full h-11 rounded-xl border border-[#D0D5DD] bg-white px-3.5 flex items-center justify-between text-[14px] text-[#101828] outline-none transition-colors hover:border-[#98A2B3] focus:border-[#BB1A8C] cursor-pointer disabled:opacity-50"
             >
-              <span>{role || "Select Option"}</span>
+              <span>{role}</span>
               <ChevronDown className="w-4 h-4 text-[#667085]" />
             </button>
 
@@ -181,9 +207,17 @@ export default function AddTeamMemberModal({
           {/* Submit Button */}
           <button
             type="submit"
-            className="w-full py-3 rounded-xl bg-[#BB1A8C] hover:bg-[#A01677] text-white text-[14px] font-semibold shadow-xs transition-colors cursor-pointer mt-4"
+            disabled={isSubmitting}
+            className="w-full py-3 rounded-xl bg-[#BB1A8C] hover:bg-[#A01677] text-white text-[14px] font-semibold shadow-xs transition-colors cursor-pointer mt-4 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Add team member
+            {isSubmitting ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span>Inviting...</span>
+              </>
+            ) : (
+              "Add team member"
+            )}
           </button>
         </form>
       </div>

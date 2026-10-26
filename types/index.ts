@@ -3,3 +3,7 @@ export * from "./overview";
 export * from "./users";
 export * from "./providers";
 export * from "./ambassadors";
+export * from "./campaigns";
+export * from "./referrals";
+export * from "./team";
+export * from "./settings";

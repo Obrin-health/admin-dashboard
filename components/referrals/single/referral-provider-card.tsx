@@ -12,11 +12,11 @@ interface ReferralProviderCardProps {
 }
 
 export const ReferralProviderCard: React.FC<ReferralProviderCardProps> = ({
-  providerId = "PRV-0091",
-  name = "XYZ Clinic",
-  location = "Ikeja, Lagos",
-  initials = "JD",
-  onboardingDate = "October 10, 2026",
+  providerId = "-",
+  name = "Provider",
+  location = "-",
+  initials = "P",
+  onboardingDate = "-",
 }) => {
   return (
     <div className="w-full rounded-2xl border border-[#EAECF0] bg-white p-6 shadow-xs flex flex-col justify-between">
@@ -42,26 +42,28 @@ export const ReferralProviderCard: React.FC<ReferralProviderCardProps> = ({
             </div>
           </div>
 
-          <Link
-            href={`/provider/${providerId}`}
-            className="text-[13px] font-semibold text-[#BB1A8C] hover:text-[#9B1373] hover:underline transition-colors shrink-0"
-          >
-            View provider
-          </Link>
+          {providerId && providerId !== "-" && (
+            <Link
+              href={`/provider/${providerId}`}
+              className="text-[13px] font-semibold text-[#BB1A8C] hover:text-[#9B1373] hover:underline transition-colors shrink-0"
+            >
+              View provider
+            </Link>
+          )}
         </div>
 
         {/* Key-Value Details */}
         <div className="space-y-4 text-[13px]">
           <div className="flex items-center justify-between">
             <span className="text-[#475467]">Provider ID</span>
-            <span className="font-medium text-[#101828]">{providerId}</span>
+            <span className="font-medium text-[#101828] font-mono">{providerId}</span>
           </div>
           <div className="flex items-center justify-between">
             <span className="text-[#475467]">Location</span>
             <span className="font-medium text-[#101828]">{location}</span>
           </div>
           <div className="flex items-center justify-between">
-            <span className="text-[#475467]">Onbaording Date</span>
+            <span className="text-[#475467]">Onboarding Date</span>
             <span className="font-medium text-[#101828]">{onboardingDate}</span>
           </div>
         </div>
