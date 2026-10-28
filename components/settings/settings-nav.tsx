@@ -33,8 +33,8 @@ export default function SettingsNav({
               type="button"
               onClick={() => onTabChange(item.id)}
               className={`w-full flex items-center text-left text-[14px] transition-colors cursor-pointer group py-0.5 ${isActive
-                  ? "text-[#BB1A8C] font-semibold"
-                  : "text-[#667085] font-normal hover:text-[#101828]"
+                ? "text-[#BB1A8C] font-semibold"
+                : "text-[#667085] font-normal hover:text-[#101828]"
                 }`}
             >
               {/* Active Indicator Bar */}
@@ -63,14 +63,14 @@ export default function SettingsNav({
       </div>
 
       {/* System Section */}
-      <div>
+      {/* <div>
         <div className="mb-4">
           <span className="text-[12px] font-semibold text-[#8A9BA8] tracking-wider uppercase">
             SYSTEM
           </span>
         </div>
         {renderNavList(systemItems)}
-      </div>
+      </div> */}
     </nav>
   );
 }
